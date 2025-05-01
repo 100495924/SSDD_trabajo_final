@@ -1,0 +1,5 @@
+.vscode/settings.json
+servidor/client
+servidor/client.o
+servidor/servidor
+servidor/servidor.o

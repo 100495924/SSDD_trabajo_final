@@ -3,3 +3,4 @@ servidor/client
 servidor/client.o
 servidor/servidor
 servidor/servidor.o
+servidor/manage_platform

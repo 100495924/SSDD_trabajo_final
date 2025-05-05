@@ -11,7 +11,7 @@ all:
 
 
 servidor: servidor.o
-	$(CC) -o $@ $@.c protocol.c lines.c $(LDLIBS_SERVER) 
+	$(CC) -o $@ $@.c protocol.c lines.c manage_platform.c $(LDLIBS_SERVER) 
 
 client: client.o
 	$(CC) -o $@ $@.c lines.c $(LDLIBS_SERVER) 

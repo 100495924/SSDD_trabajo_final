@@ -1,6 +1,7 @@
 #include "comm_sock.h"
 #include "protocol.h"
 #include "lines.h"
+#include "manage_platform.h"
 #include <stdio.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -74,56 +75,56 @@ void *servicio(){
         tratar_peticion(&pet);  // tratar petición
         pthread_mutex_unlock(&mutex_tuples);
     }   
+
     pthread_exit(0);
 }
 
 void tratar_peticion(struct peticion *pet){
-    int error;
+    int error, status;
 
-    printf("%s %s ", pet->command_str, pet->client_user_name);
+    //printf("%s %s ", pet->command_str, pet->client_user_name);
     if (strcmp(pet->command_str, "REGISTER") == 0){
         // ejecutar REGISTER
-
-        // enviar byte status
+        status = register_user(pet->client_user_name);
+        
     }else if (strcmp(pet->command_str, "UNREGISTER") == 0){
         // ejecutar UNREGISTER
+        status = unregister_user(pet->client_user_name);
 
-        // enviar byte status
     }else if (strcmp(pet->command_str, "CONNECT") == 0){
         // ejecutar CONNECT
-        printf("%s", pet->user_port);
+        //printf("%s", pet->user_port);
 
-        // enviar byte status
     }else if (strcmp(pet->command_str, "PUBLISH") == 0){
         // ejecutar PUBLISH
-        printf("%s %s", pet->file_name, pet->description);
+        //printf("%s %s", pet->file_name, pet->description);
 
-        // enviar byte status
     }else if (strcmp(pet->command_str, "DELETE") == 0){
         // ejecutar DELETE
-        printf("%s", pet->file_name);
+        //printf("%s", pet->file_name);
 
-        // enviar byte status
     }else if (strcmp(pet->command_str, "LIST_USERS") == 0){
         // ejecutar LIST_USERS
 
-        // enviar byte status
-
-        // si status es 0, enviar usuarios
     }else if (strcmp(pet->command_str, "LIST_CONTENT") == 0){
         // ejecutar LIST_CONTENT
-        printf("%s", pet->user_name);
+        //printf("%s", pet->user_name);
 
-        // enviar byte status, enviar 
-
-        // si status es 0, enviar contenido de usuario
     }else if (strcmp(pet->command_str, "DISCONNECT") == 0){
         // ejecutar DISCONNECT
 
-        // enviar byte status
     }
 
-    printf("\n");
+    // enviar byte status
+    if (write(pet->socket_pet, &status, sizeof(status)) < 0){
+        perror("[ERROR] Error al enviar status\n");
+        return;
+    }
+    // si command_str es LIST_USERS y status es 0 enviar usuarios
+    // si command_str es LIST_CONTENT y status es 0 enviar contenido 
+
+
+    //printf("\n");
 
     close(pet->socket_pet);     // Cerramos el socket del cliente
 }

@@ -104,7 +104,35 @@ void tratar_peticion(struct peticion *pet){
         //printf("%s", pet->file_name);
 
     }else if (strcmp(pet->command_str, "LIST_USERS") == 0){
-        // ejecutar LIST_USERS
+        // RELLENAR CUANDO SE HAGA ESTA PARTE
+        // list_users_check(user)
+        
+        char connected_users[11];
+        long num_users = 0;
+        int return_value = list_users_get_num(num_users);
+
+        if (return_value != 0){
+            return return_value;
+        }
+        if (sprintf(connected_users, "%ld", num_users) < 0){
+            return 3;
+        }
+
+        struct ListUserInfo *users_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
+        if (users_info == NULL) {
+            return 3;
+        }
+
+        return_value = list_users_get_info(users_info);
+        if (return_value != 0){
+            free(users_info);
+            return return_value;
+        }
+
+        // RELLENAR CUANDO SE HAGA ESTA PARTE
+        // mandar mensajes socket
+
+        free(users_info);
 
     }else if (strcmp(pet->command_str, "LIST_CONTENT") == 0){
         // ejecutar LIST_CONTENT

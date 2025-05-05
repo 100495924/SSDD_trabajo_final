@@ -12,6 +12,7 @@ int is_file_in_directory(char *dirname, char *filepath){
     // Directorio "active_users" existe?
     DIR* dir = opendir(dirname);
     int result;
+    errno = 0;
     
     // Directorio existe
     if (dir) {
@@ -257,7 +258,7 @@ int disconnect_user(char *user){
     return 0;
 }
 
-int list_users(char* user, char* connected_users){
+int list_users_check(char* user){
     // 0 en caso de exito
     // 1 si el usuario no registrado
     // 2 si el usuario no conectado
@@ -287,20 +288,111 @@ int list_users(char* user, char* connected_users){
         return 2;
     }
 
-    // (3) Preparar lista
+    return 0;
+}
 
-    char filepath_active[300];
-    // Nombre del archivo del usuario (en el caso de existir)
-    if (sprintf(filepath_active, "%s/%s", dirname_active, user) < 0){
+int list_users_get_num(long* count){
+    DIR* dir = opendir(dirname_active);
+    struct dirent * entry;
+    errno = 0;
+
+    if (dir) {
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_type == DT_REG) {
+                // printf("%s - %d\n", entry->d_name, entry->d_type);
+                count++;
+            }
+        }
+        // Error de readdir()
+        if (errno == EBADF){
+            closedir(dir);
+            return 3;
+        }
+        // Cerrar directorio
+        if (closedir(dir) == -1){
+            return 3;
+        }
+    } 
+    // Error
+    else {
         return 3;
-    }
-
-    if (unlink(filepath_active) != 0){
-        return 3; 
     }
 
     return 0;
 }
+
+
+int list_users_get_info(struct ListUserInfo *info){
+    DIR* dir = opendir(dirname_active);
+    struct dirent * entry;
+    errno = 0;
+    FILE *user_active_file;
+    char filepath_active[300];
+    long count = 0;
+
+    if (dir) {
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_type == DT_REG) {
+                // user
+                sprintf(info[count].user, "%s", entry->d_name);
+
+                // Abrir archivo
+                if (sprintf(filepath_active, "%s/%s", dirname_active, entry->d_name) < 0){
+                    return 3;
+                }
+                user_active_file = fopen(filepath_active, "r");
+                if (user_active_file == NULL){
+                    return 3;
+                }
+
+                // ip_value
+                // Calcular length del string en el archivo (leer caracter a caracter hasta "/")
+                char ip_value[16];
+                int count_ip = 0;
+                char c = 'a';
+                while (c != '/'){
+                    c = fgetc(user_active_file);
+                    count_ip++;
+                }
+                // Leer ese numero de bytes en el archivo
+                fseek(user_active_file, 0, SEEK_SET); // principio del archivo
+                fread(ip_value, sizeof(char), count_ip-1, user_active_file);
+                ip_value[count_ip-1] = '\0';
+                fseek(user_active_file, 1, SEEK_CUR); // saltarse "/"
+
+                sprintf(info[count].ip_user, "%s", ip_value);
+
+                // port_user
+                if (fscanf(user_active_file, "%d", &info[count].port_user) == EOF){
+                    fclose(user_active_file);
+                    return 3;
+                }
+
+                // Cerrar archivo
+                if (fclose(user_active_file) < 0){
+                    return 3;
+                }
+                count++;
+            }
+        }
+        // Error de readdir()
+        if (errno == EBADF){
+            closedir(dir);
+            return 3;
+        }
+        // Cerrar directorio
+        if (closedir(dir) == -1){
+            return 3;
+        }
+    } 
+    // Error
+    else {
+        return 3;
+    }
+
+    return 0;
+}
+
 
 int main(int argc, char const *argv[])
 {
@@ -308,9 +400,22 @@ int main(int argc, char const *argv[])
     // int res = unregister_user(usuario);
 
     // int res = connect_user("Francisco", "10.128.1.253", 5000);
-    int res = disconnect_user("Francisco");
+    // int res = disconnect_user("Francisco");
 
-    printf("Res: %d\n", res);
+    // char mychar[10];
+    // int res = list_users_get_num(mychar);
+    // printf("Num: %s\n", mychar);
+
+    // int res = register_user("Paco");
+    // connect_user("Paco", "20.228.2.253", 4500);
+    // int num_users = 2;
+    // struct ListUserInfo *users_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
+    // int res = list_users_get_info(users_info);
+    // printf("user: %s / ip: %s / port: %d\n", users_info[0].user, users_info[0].ip_user, users_info[0].port_user);
+    // printf("user: %s / ip: %s / port: %d\n", users_info[1].user, users_info[1].ip_user, users_info[1].port_user);
+    // free(users_info);
+    
+    // printf("Res: %d\n", res);
 
     return 0;
 }

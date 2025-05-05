@@ -88,7 +88,6 @@ int check_user_connected(char *user){
 }
 
 int register_user(char* user){
-    char *dirname_registered = "registered_users";
     char *filepath;
     filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
     sprintf(filepath, "%s/%s", dirname_registered, user);
@@ -123,12 +122,12 @@ int register_user(char* user){
         // el usuario existe
         return 1;
     }
+    free(filepath);
 
     return 0;
 }
 
 int unregister_user(char* user){
-    char *dirname_registered = "registered_users";
     char *filepath;
     filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
     sprintf(filepath, "%s/%s", dirname_registered, user);
@@ -147,6 +146,8 @@ int unregister_user(char* user){
         // error eliminando el archivo
         return 2;   // error
     }
+
+    free(filepath);
     return 0;
 }
 
@@ -257,6 +258,78 @@ int disconnect_user(char *user){
     return 0;
 }
 
+int publish(char* user, char* file_path, char* description){
+    // verificar que el usuario existe
+    char *user_filepath;
+    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    sprintf(user_filepath, "%s/%s", dirname_registered, user);
+
+    // verificar antes si el archivo user existe
+    if (check_user_registered(user) < 0){
+        return 4;   // error
+    }else if (check_user_registered(user) == 0){
+        return 1;   // user no registrado
+    }
+
+    // verificar que el usuario está conectado
+    if (check_user_connected(user) < 0){
+        return 4;   // error
+    }else if (check_user_connected(user) == 0){
+        return 2;   // user no registrado
+    }
+
+    // abrir archivo user
+    FILE *user_file = fopen(user_filepath, "r+");
+
+    if (user_file == NULL){
+        return 4;   // error
+    }
+
+    // verificar si el archivo ya está publicado
+    int file_found = 1;     // 0 => encontrado
+    int check_eof = 0;
+    char path_read[256];
+    char find_line_break = 'A';
+
+    while (file_found != 0 && check_eof != EOF){
+        check_eof = fscanf(user_file, "%s ", path_read);   // leemos el path del archivo 
+        // lo comparamos con el path que estamos buscando
+        file_found = strcmp(path_read, file_path);
+        // leemos hasta encontrar un line break solo si no hemos terminado
+        if (file_found != 0 && check_eof != EOF){
+            while(find_line_break != '\n'){
+                find_line_break = fgetc(user_file);
+            }
+            find_line_break = 'A';
+        }
+        
+    }
+
+    if (check_eof == EOF && file_found != 0){   // archivo no encontrado
+        // publicar archivo
+        if (fprintf(user_file, "%s ", file_path) < 0){
+            fclose(user_file);
+            return 4;   // error
+        }
+        if (fprintf(user_file, "%s\n", description) < 0){
+            fclose(user_file);
+            return 4;   // error
+        }
+    }else{
+        fclose(user_file);
+        return 3;   // el fichero ya está publicado
+    }
+
+    // cerrar el archivo 
+    if (fclose(user_file) < 0){
+        return 4;   // error
+    }
+    free(user_filepath);
+
+    return 0;
+}
+
+
 int list_users(char* user, char* connected_users){
     // 0 en caso de exito
     // 1 si el usuario no registrado
@@ -307,10 +380,16 @@ int main(int argc, char const *argv[])
     // char *usuario = "user/Francisco";
     // int res = unregister_user(usuario);
 
-    // int res = connect_user("Francisco", "10.128.1.253", 5000);
-    int res = disconnect_user("Francisco");
+    int res = register_user("Francisco");
+    res = connect_user("Francisco", "10.128.1.253", 5000);
+    //int res = unregister_user("Francisco");
+
+    printf("Res: %d\n", res);
+    res = publish("Francisco", "/usr/desktop/file_pataton", "Este archivo es un pataton");
 
     printf("Res: %d\n", res);
 
     return 0;
 }
+
+

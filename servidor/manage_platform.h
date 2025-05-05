@@ -5,7 +5,12 @@
 #include <errno.h>
 #include <sys/stat.h>
 
+char *dirname_registered = "registered_users";
+char *dirname_active = "active_users";
+
 int is_file_in_directory(char *filepath, char *user);
+int check_user_registered(char *user);
+int check_user_connected(char *user);
 
 int register_user(char* user);
 int unregister_user(char* user);

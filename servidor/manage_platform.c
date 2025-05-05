@@ -41,6 +41,52 @@ int is_file_in_directory(char *dirname, char *filepath){
     return result;
 }
 
+// -1 : error
+// 0 : no registrado
+// 1 : registrado
+int check_user_registered(char *user){
+    char filepath_registered[300];
+    // Nombre del archivo del usuario (en el caso de existir)
+    if (sprintf(filepath_registered, "%s/%s", dirname_registered, user) < 0){
+        return 3;
+    }
+
+    int is_user_registered = is_file_in_directory(dirname_registered, filepath_registered);
+    
+    if (is_user_registered == 1){
+        return 1;
+    }
+    else if (is_user_registered == -1){
+        return -1;
+    }
+    else{
+        return 0;
+    }
+}
+
+// -1 : error
+// 0 : no registrado
+// 1 : registrado
+int check_user_connected(char *user){
+    char filepath_active[300];
+    // Nombre del archivo del usuario (en el caso de existir)
+    if (sprintf(filepath_active, "%s/%s", dirname_active, user) < 0){
+        return 3;
+    }
+
+    int is_user_active= is_file_in_directory(dirname_active, filepath_active);
+    
+    if (is_user_active == 1){
+        return 1;
+    }
+    else if (is_user_active == -1){
+        return -1;
+    }
+    else{
+        return 0;
+    }
+}
+
 int register_user(char* user){
     char *dirname_registered = "registered_users";
     char *filepath;
@@ -112,22 +158,18 @@ int connect_user(char* user, char* ip_user, int port_user){
     
     // ==========MODIFICAR===========
     // (1) Usuario registrado?
-    char *dirname_registered = "registered_users";
-    char filepath_registered[300];
-    // Nombre del archivo del usuario (en el caso de existir)
-    if (sprintf(filepath_registered, "%s/%s", dirname_registered, user) < 0){
-        return 3;
-    }
-
-    int is_user_registered = is_file_in_directory(dirname_registered, filepath_registered);
-    
-    if (is_user_registered == 0 || is_user_registered == 2){
+    int is_user_registered = check_user_registered(user);
+    // No registrado
+    if (is_user_registered == 0){
         return 1;
+    }
+    // Error
+    else if (is_user_registered == -1){
+        return 3;
     }
     
     // (2) Usuario ya conectado?
 
-    char *dirname_active = "active_users";
     char filepath_active[300];
     // Nombre del archivo del usuario (en el caso de existir)
     if (sprintf(filepath_active, "%s/%s", dirname_active, user) < 0){
@@ -177,40 +219,82 @@ int disconnect_user(char *user){
     
     // ==========MODIFICAR===========
     // (1) Usuario registrado?
-    char *dirname_registered = "registered_users";
-    char filepath_registered[300];
-    // Nombre del archivo del usuario (en el caso de existir)
-    if (sprintf(filepath_registered, "%s/%s", dirname_registered, user) < 0){
-        return 3;
-    }
 
-    int is_user_registered = is_file_in_directory(dirname_registered, filepath_registered);
-    
-    if (is_user_registered == 0 || is_user_registered == 2){
+    int is_user_registered = check_user_registered(user);
+    // No registrado
+    if (is_user_registered == 0){
         return 1;
+    }
+    // Error
+    else if (is_user_registered == -1){
+        return 3;
     }
     
     // (2) Usuario conectado?
 
-    char *dirname_active = "active_users";
+    int is_user_connected = check_user_connected(user);
+    // Error
+    if (is_user_connected == -1){
+        return 3;
+    }
+    // Usuario no conectado
+    else if (is_user_connected == 0){
+        return 2;
+    }
+    
+    // (3) Eliminar usuario del directorio "active_users"
+
     char filepath_active[300];
     // Nombre del archivo del usuario (en el caso de existir)
     if (sprintf(filepath_active, "%s/%s", dirname_active, user) < 0){
         return 3;
     }
 
-    int is_user_connected = is_file_in_directory(dirname_active, filepath_active);
+    if (unlink(filepath_active) != 0){
+        return 3; 
+    }
 
+    return 0;
+}
+
+int list_users(char* user, char* connected_users){
+    // 0 en caso de exito
+    // 1 si el usuario no registrado
+    // 2 si el usuario no conectado
+    // 3 en cualquier otro caso
+
+    // (1) Usuario registrado?
+
+    int is_user_registered = check_user_registered(user);
+    // No registrado
+    if (is_user_registered == 0){
+        return 1;
+    }
+    // Error
+    else if (is_user_registered == -1){
+        return 3;
+    }
+    
+    // (2) Usuario conectado?
+
+    int is_user_connected = check_user_connected(user);
     // Error
     if (is_user_connected == -1){
         return 3;
     }
     // Usuario no conectado
-    else if (is_user_connected == 0 || is_user_connected == 2){
+    else if (is_user_connected == 0){
         return 2;
     }
-    
-    // (3) Eliminar usuario del directorio "active_users"
+
+    // (3) Preparar lista
+
+    char filepath_active[300];
+    // Nombre del archivo del usuario (en el caso de existir)
+    if (sprintf(filepath_active, "%s/%s", dirname_active, user) < 0){
+        return 3;
+    }
+
     if (unlink(filepath_active) != 0){
         return 3; 
     }

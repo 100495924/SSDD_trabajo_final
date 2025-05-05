@@ -1,6 +1,8 @@
 #include "manage_platform.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
 
 // -1 : error
 // 0 : directorio existe, archivo no
@@ -86,39 +88,66 @@ int check_user_connected(char *user){
 }
 
 int register_user(char* user){
+    char *users_dir = "registered_users";
+    char *filepath;
+    filepath = malloc(sizeof(char) * (strlen(user) + strlen(users_dir) + 1));
+    sprintf(filepath, "%s/%s", users_dir, user);
+
     // verificar antes si el archivo user existe
-    if (access(user, F_OK) == 0){
-        // El archivo (y el usuario) ya existe
-        return 1;   
+    int dir_status = is_file_in_directory(users_dir, filepath);
+    if (dir_status == -1){
+        // error
+        return 2;
     }
 
-    // abrir un archivo en modo escritura con fopen() con el nombre
-    // user
+    if (dir_status == 2){
+        // el directorio no existe, crearlo 
+        if (mkdir(users_dir, 0755) == -1){
+            return 2;
+        }
+    }
 
-    FILE *user_file = fopen(user, "w");
+    if (dir_status == 2 || dir_status == 0){
+        // el archivo no existe, crearlo
 
-    if (user_file == NULL){
-        perror("[ERROR] Error al crear el archivo para user\n");
-        return 2;
+        FILE *user_file = fopen(filepath, "w");
+
+        if (user_file == NULL){
+            return 2;
+        }
+
+        if (fclose(user_file) < 0){
+            return 2;   // error
+        }
+    }else if (dir_status == 1){
+        // el usuario existe
+        return 1;
     }
 
     return 0;
 }
 
 int unregister_user(char* user){
+    char *users_dir = "registered_users";
+    char *filepath;
+    filepath = malloc(sizeof(char) * (strlen(user) + strlen(users_dir) + 1));
+    sprintf(filepath, "%s/%s", users_dir, user);
+
     // verificar antes si el archivo user existe
-    if (access(user, F_OK) == 0){
-        // El archivo (y el usuario) existe, eliminarlo
-        if (unlink(user) != 0){
-            // error eliminando el archivo
-            return 2;   // error
-        }
-        return 0;
-           
-    }else{
-        // El archivo (usuario) no existe
+    int dir_status = is_file_in_directory(users_dir, filepath);
+    if (dir_status == -1){
+        return 2;   // error
+    }else if(dir_status == 0 || dir_status == 2){
+        // usuario (archivo) no existe
         return 1;
     }
+
+    // El archivo (y el usuario) existe, eliminarlo
+    if (unlink(filepath) != 0){
+        // error eliminando el archivo
+        return 2;   // error
+    }
+    return 0;
 }
 
 int connect_user(char* user, char* ip_user, int port_user){

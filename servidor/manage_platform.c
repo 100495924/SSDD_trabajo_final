@@ -42,13 +42,13 @@ int is_file_in_directory(char *dirname, char *filepath){
 }
 
 int register_user(char* user){
-    char *users_dir = "registered_users";
+    char *dirname_registered = "registered_users";
     char *filepath;
-    filepath = malloc(sizeof(char) * (strlen(user) + strlen(users_dir) + 1));
-    sprintf(filepath, "%s/%s", users_dir, user);
+    filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    sprintf(filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
-    int dir_status = is_file_in_directory(users_dir, filepath);
+    int dir_status = is_file_in_directory(dirname_registered, filepath);
     if (dir_status == -1){
         // error
         return 2;
@@ -56,7 +56,7 @@ int register_user(char* user){
 
     if (dir_status == 2){
         // el directorio no existe, crearlo 
-        if (mkdir(users_dir, 0755) == -1){
+        if (mkdir(dirname_registered, 0755) == -1){
             return 2;
         }
     }
@@ -82,13 +82,13 @@ int register_user(char* user){
 }
 
 int unregister_user(char* user){
-    char *users_dir = "registered_users";
+    char *dirname_registered = "registered_users";
     char *filepath;
-    filepath = malloc(sizeof(char) * (strlen(user) + strlen(users_dir) + 1));
-    sprintf(filepath, "%s/%s", users_dir, user);
+    filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    sprintf(filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
-    int dir_status = is_file_in_directory(users_dir, filepath);
+    int dir_status = is_file_in_directory(dirname_registered, filepath);
     if (dir_status == -1){
         return 2;   // error
     }else if(dir_status == 0 || dir_status == 2){

@@ -89,7 +89,6 @@ int check_user_connected(char *user){
 }
 
 int register_user(char* user){
-    char *dirname_registered = "registered_users";
     char *filepath;
     filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
     sprintf(filepath, "%s/%s", dirname_registered, user);
@@ -124,12 +123,12 @@ int register_user(char* user){
         // el usuario existe
         return 1;
     }
+    free(filepath);
 
     return 0;
 }
 
 int unregister_user(char* user){
-    char *dirname_registered = "registered_users";
     char *filepath;
     filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
     sprintf(filepath, "%s/%s", dirname_registered, user);
@@ -148,6 +147,8 @@ int unregister_user(char* user){
         // error eliminando el archivo
         return 2;   // error
     }
+
+    free(filepath);
     return 0;
 }
 
@@ -257,6 +258,202 @@ int disconnect_user(char *user){
 
     return 0;
 }
+
+int publish(char* user, char* file_path, char* description){
+    // verificar que el usuario existe
+    char *user_filepath;
+    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    sprintf(user_filepath, "%s/%s", dirname_registered, user);
+
+    // verificar antes si el archivo user existe
+    if (check_user_registered(user) < 0){
+        return 4;   // error
+    }else if (check_user_registered(user) == 0){
+        return 1;   // user no registrado
+    }
+
+    // verificar que el usuario está conectado
+    if (check_user_connected(user) < 0){
+        return 4;   // error
+    }else if (check_user_connected(user) == 0){
+        return 2;   // user no conectado
+    }
+
+    // abrir archivo user
+    FILE *user_file = fopen(user_filepath, "r+");
+
+    if (user_file == NULL){
+        return 4;   // error
+    }
+
+    // verificar si el archivo ya está publicado
+    int file_found = 1;     // 0 => encontrado
+    int check_eof = 0;
+    char path_read[256];
+    char find_line_break = 'A';
+
+    while (file_found != 0 && check_eof != EOF){
+        check_eof = fscanf(user_file, "%s ", path_read);   // leemos el path del archivo 
+        // lo comparamos con el path que estamos buscando
+        file_found = strcmp(path_read, file_path);
+        // leemos hasta encontrar un line break solo si no hemos terminado
+        if (file_found != 0 && check_eof != EOF){
+            while(find_line_break != '\n'){
+                find_line_break = fgetc(user_file);
+            }
+            find_line_break = 'A';
+        }
+        
+    }
+
+    if (check_eof == EOF && file_found != 0){   // archivo no encontrado
+        // publicar archivo
+        if (fprintf(user_file, "%s ", file_path) < 0){
+            fclose(user_file);
+            return 4;   // error
+        }
+        if (fprintf(user_file, "%s\n", description) < 0){
+            fclose(user_file);
+            return 4;   // error
+        }
+    }else{
+        fclose(user_file);
+        return 3;   // el fichero ya está publicado
+    }
+
+    // cerrar el archivo 
+    if (fclose(user_file) < 0){
+        return 4;   // error
+    }
+    free(user_filepath);
+
+    return 0;
+}
+
+int delete(char* user, char* file_path){
+    // verificar que el usuario existe
+    char *user_filepath;
+    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    sprintf(user_filepath, "%s/%s", dirname_registered, user);
+
+    // verificar antes si el archivo user existe
+    if (check_user_registered(user) < 0){
+        return 4;   // error
+    }else if (check_user_registered(user) == 0){
+        return 1;   // user no registrado
+    }
+
+    // verificar que el usuario está conectado
+    if (check_user_connected(user) < 0){
+        return 4;   // error
+    }else if (check_user_connected(user) == 0){
+        return 2;   // user no conectado
+    }
+
+    // abrir archivo user
+    FILE *user_file = fopen(user_filepath, "r+");
+
+    if (user_file == NULL){
+        return 4;   // error
+    }
+
+    // verificar si el archivo ya está publicado
+    int file_found = 1;     // 0 => encontrado
+    int check_eof = 0;
+    char path_read[256];
+    char find_line_break = 'A';
+
+    while (file_found != 0 && check_eof != EOF){
+        check_eof = fscanf(user_file, "%s ", path_read);   // leemos el path del archivo 
+        // lo comparamos con el path que estamos buscando
+        file_found = strcmp(path_read, file_path);
+        // leemos hasta encontrar un line break solo si no hemos terminado
+        if (file_found != 0 && check_eof != EOF){
+            while(find_line_break != '\n'){
+                find_line_break = fgetc(user_file);
+            }
+            find_line_break = 'A';
+        }
+        
+    }
+
+    if (check_eof == EOF && file_found != 0){   
+        // archivo no encontrado
+        fclose(user_file);
+        return 3;
+    }else{      // el fichero está publicado
+        int is_last = 0;
+        long key_pos;
+        fseek(user_file, -strlen(path_read), SEEK_CUR);
+        // estamos delante del fichero que hay que borrar
+        key_pos = ftell(user_file);
+
+        // avanzamos a la siguiente entrada
+        check_eof = fscanf(user_file, "%s ", path_read);   // leemos el path del archivo 
+        while(find_line_break != '\n'){
+            find_line_break = fgetc(user_file);
+        }
+        find_line_break = 'A';
+        // Ahora estamos al principio de la siguiente entrada después de la que hay que borrar
+
+        // checkeamos si estamos al final del archivo o no
+        check_eof = fscanf(user_file, "%s ", path_read);
+
+        FILE *temp_file;
+        if (check_eof != EOF){
+            // No estamos al final del archivo, hacemos una copia 
+            // del resto del archivo en un archivo temporal
+            is_last = 0;
+            temp_file = fopen("temp_copy", "w+");
+            if (temp_file == NULL){
+                return 4;   // error
+            }
+
+            // Metemos el path que habíamos leído antes
+            fprintf(temp_file, "%s ", path_read);
+            
+            char buffer[1];
+            while (fread(&buffer, sizeof(char), 1, user_file) > 0){
+                fwrite(&buffer[0], 1, sizeof(buffer[0]), temp_file);
+                
+            }// Llegamos al final del archivo, habiendo hecho su copia.
+
+            fflush(temp_file);
+        }else{
+            // estamos al final del archivo y no hace falta hacer copias
+            is_last = 1;
+        }
+        fseek(user_file, key_pos-1, SEEK_SET);
+
+        // truncamos el archivo
+        ftruncate(user_file->_fileno, ftell(user_file));
+
+        if (is_last == 0){
+            // hacemos un MERGE de archivos
+            char buffer[1];
+            fseek(temp_file, 0, SEEK_SET);	// Volvemos al inicio en el archivo temporal.
+            while (fread(&buffer, sizeof(char), 1, temp_file) > 0){
+                fwrite(&buffer[0], 1, sizeof(buffer[0]), user_file);
+            }
+    
+            fflush(user_file);
+    
+            if (fclose(temp_file) < 0){
+                return 4;   // error
+            }
+            unlink("temp_copy");
+        }
+    }
+
+    // cerrar el archivo 
+    if (fclose(user_file) < 0){
+        return 4;   // error
+    }
+    free(user_filepath);
+
+    return 0;
+}
+
 
 int list_users_check(char* user){
     // 0 en caso de exito
@@ -399,23 +596,19 @@ int main(int argc, char const *argv[])
     // char *usuario = "user/Francisco";
     // int res = unregister_user(usuario);
 
-    // int res = connect_user("Francisco", "10.128.1.253", 5000);
-    // int res = disconnect_user("Francisco");
+    int res = register_user("Francisco");
+    printf("Res: %d\n", res);
+    res = connect_user("Francisco", "10.128.1.253", 5000);
+    //int res = unregister_user("Francisco");
 
-    // char mychar[10];
-    // int res = list_users_get_num(mychar);
-    // printf("Num: %s\n", mychar);
-
-    // int res = register_user("Paco");
-    // connect_user("Paco", "20.228.2.253", 4500);
-    // int num_users = 2;
-    // struct ListUserInfo *users_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
-    // int res = list_users_get_info(users_info);
-    // printf("user: %s / ip: %s / port: %d\n", users_info[0].user, users_info[0].ip_user, users_info[0].port_user);
-    // printf("user: %s / ip: %s / port: %d\n", users_info[1].user, users_info[1].ip_user, users_info[1].port_user);
-    // free(users_info);
-    
-    // printf("Res: %d\n", res);
+    printf("Res: %d\n", res);
+    /* res = publish("Francisco", "/usr/desktop/file_pataton", "Este archivo es una patata");
+    res = publish("Francisco", "/usr/desktop/file_patatatita", "Este archivo es una patata");
+    res = publish("Francisco", "/usr/desktop/file_patatatota", "Este archivo es una patata"); */
+    res = delete("Francisco", "/usr/desktop/file_pataton");
+    printf("Res: %d\n", res);
 
     return 0;
 }
+
+

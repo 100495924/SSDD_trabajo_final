@@ -14,6 +14,11 @@ struct ListUserInfo {
     int port_user;
 };
 
+typedef struct ListContentInfo{
+    char file_path[256];
+    char description[256];
+}ListContentInfo;
+
 int is_file_in_directory(char *filepath, char *user);
 int check_user_registered(char *user);
 int check_user_connected(char *user);
@@ -33,6 +38,6 @@ int list_users_get_num(long* count);
 int list_users_get_info(struct ListUserInfo *info);
 
 /// @param contents_owner username del dueño de los contenidos
-int list_content(char* user, char* contents_owner);
+int list_content(char* user, char* contents_owner, struct ListContentInfo* contents);
 
 #endif

@@ -80,7 +80,8 @@ void *servicio(){
 }
 
 void tratar_peticion(struct peticion *pet){
-    int error, status;
+    int error, status, n_files;     // n_files para list_content_get_num
+    struct ListContentInfo* contents;
 
     //printf("%s %s ", pet->command_str, pet->client_user_name);
     if (strcmp(pet->command_str, "REGISTER") == 0){
@@ -137,6 +138,16 @@ void tratar_peticion(struct peticion *pet){
     }else if (strcmp(pet->command_str, "LIST_CONTENT") == 0){
         // ejecutar LIST_CONTENT
         //printf("%s", pet->user_name);
+        n_files = list_content_get_num(pet->user_name);  // contar el número de entradas que tenemos que devolver
+        if (n_files == -1){
+            // el usuario cuyo contenido se quiere conocer no existe
+            status = 3;
+        }else if (n_files == -2){
+            status = 4; // error
+        }else{
+            contents = (struct ListContentInfo*) malloc(sizeof(struct ListContentInfo) * n_files);
+            status = list_content(pet->client_user_name, pet->user_name, contents);
+        }
 
     }else if (strcmp(pet->command_str, "DISCONNECT") == 0){
         // ejecutar DISCONNECT
@@ -149,7 +160,22 @@ void tratar_peticion(struct peticion *pet){
         return;
     }
     // si command_str es LIST_USERS y status es 0 enviar usuarios
+
     // si command_str es LIST_CONTENT y status es 0 enviar contenido 
+    if (strcmp(pet->command_str, "LIST_CONTENT") == 0 && status == 0){
+        for (int i=0; i<n_files; i++){
+            // enviar contents[i].file_path y contents[i].description
+            if (sendMessage(pet->socket_pet, contents[i].file_path, strlen(contents[i].file_path)) < 0){
+                close(pet->socket_pet);
+                return;
+            }
+            if (sendMessage(pet->socket_pet, contents[i].description, strlen(contents[i].description)) < 0){
+                close(pet->socket_pet);
+                return;
+            }
+            //printf("%s %s", contents[i].file_path, contents[i].description);
+        }
+    }
 
 
     //printf("\n");

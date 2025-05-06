@@ -590,23 +590,149 @@ int list_users_get_info(struct ListUserInfo *info){
     return 0;
 }
 
+int list_content_get_num(char *user){
+    // verificar que el usuario existe
+    char *user_filepath;
+    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    sprintf(user_filepath, "%s/%s", dirname_registered, user);
+
+    // verificar antes si el archivo user existe
+    if (check_user_registered(user) < 0){
+        return -2;   // error
+    }else if (check_user_registered(user) == 0){
+        return -1;   // user no registrado
+    }
+    
+    FILE* owner_file = fopen(user_filepath, "r+");
+
+    if (owner_file == NULL){
+        return -2;
+    }
+
+    // contar el número de lineas del archivo es igual a 
+    // contar el número de entradas/archivos que ofrece
+    // un usuario
+    int n_files = 0;
+    char check_line_break = 'A';
+
+    fseek(owner_file, 0, SEEK_SET);
+    while (check_line_break != EOF){
+        check_line_break = fgetc(owner_file);
+        if (check_line_break == '\n'){
+            n_files++;
+        }
+    }
+
+
+    free(user_filepath);
+    if (fclose(owner_file) < 0){
+        return -2;  // error
+    }
+    
+    return n_files;
+}
+
+int list_content(char* user, char* contents_owner, struct ListContentInfo* contents){
+    // verificar que el usuario existe
+    char *user_filepath;
+    user_filepath = malloc(sizeof(char) * (strlen(contents_owner) + strlen(dirname_registered) + 1));
+    sprintf(user_filepath, "%s/%s", dirname_registered, contents_owner);
+
+    // verificar antes si el archivo user existe
+    if (check_user_registered(user) < 0){
+        return 4;   // error
+    }else if (check_user_registered(user) == 0){
+        return 1;   // user no registrado
+    }
+
+    // verificar que el usuario está conectado
+    if (check_user_connected(user) < 0){
+        return 4;   // error
+    }else if (check_user_connected(user) == 0){
+        return 2;   // user no conectado
+    }
+
+    // abrir archivo del dueño del contenido
+    FILE *user_file = fopen(user_filepath, "r+");
+
+    if (user_file == NULL){
+        return 4;   // error
+    }
+
+    // leer todo el archivo y guardar las entradas
+    int check_eof = 0;
+    char path_read[256];
+    char find_line_break = 'A';
+    char description_read[256];
+    int entry = 0;
+    int descr_char = 0;
+
+    fseek(user_file, 0, SEEK_SET);
+    while (check_eof != EOF){
+        check_eof = fscanf(user_file, "%s ", path_read);   // leemos el path del archivo 
+
+        // leemos hasta encontrar un line break solo si no hemos terminado
+        if (check_eof != EOF){
+            strcpy(contents[entry].file_path, path_read);
+            descr_char = 0;
+            while(find_line_break != '\n'){
+                find_line_break = fgetc(user_file);
+                description_read[descr_char] = find_line_break;
+                descr_char++;
+            }
+            find_line_break = 'A';
+            description_read[descr_char] = '\0';
+            //check_eof = fscanf(user_file, "%s\n", description_read);
+            strcpy(contents[entry].description, description_read);
+        }
+        entry++;
+    }
+
+
+    return 0;
+}
 
 int main(int argc, char const *argv[])
 {
     // char *usuario = "user/Francisco";
     // int res = unregister_user(usuario);
 
+    struct ListContentInfo* contents;
+    int n_files, status;
     int res = register_user("Francisco");
     printf("Res: %d\n", res);
-    res = connect_user("Francisco", "10.128.1.253", 5000);
+    res = register_user("Paco");
+    printf("Res: %d\n", res);
+    res = connect_user("Paco", "10.128.1.253", 5000);
     //int res = unregister_user("Francisco");
 
     printf("Res: %d\n", res);
+
     /* res = publish("Francisco", "/usr/desktop/file_pataton", "Este archivo es una patata");
     res = publish("Francisco", "/usr/desktop/file_patatatita", "Este archivo es una patata");
     res = publish("Francisco", "/usr/desktop/file_patatatota", "Este archivo es una patata"); */
-    res = delete("Francisco", "/usr/desktop/file_pataton");
-    printf("Res: %d\n", res);
+    //res = delete("Francisco", "/usr/desktop/file_pataton");
+
+    // código para probar list_content
+    n_files = list_content_get_num("Francisco");  // contar el número de entradas que tenemos que devolver
+    if (n_files == -1){
+        // el usuario cuyo contenido se quiere conocer no existe
+        status = 3;
+    }else if (n_files == -2){
+        status = 4; // error
+    }else{
+        contents = (struct ListContentInfo*) malloc(sizeof(struct ListContentInfo) * n_files);
+        status = list_content("Paco", "Francisco", contents);
+    }
+
+    if (status == 0){
+        for (int i=0; i<n_files; i++){
+            printf("%s %s", contents[i].file_path, contents[i].description);
+        }
+    }
+    
+
+    printf("status: %d\n", status);
 
     return 0;
 }

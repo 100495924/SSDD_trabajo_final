@@ -1,5 +1,7 @@
 from enum import Enum
 import argparse
+import socket
+import sys
 
 class client :
 
@@ -15,58 +17,449 @@ class client :
     _server = None
     _port = -1
 
+    # se usa para saber el username activo
+    # connect -> set to user (only if OK)
+    # disconnect -> set to None (always)
+    _active_user = None
+
     # ******************** METHODS *******************
+    def read_string(sock):
+        a = ''
+        while True:
+            msg = sock.recv(1)
+            if (msg == b'\0'):
+                break
+            a += msg.decode()
+        return a
+
+    def read_number(sock):
+        a = client.read_string(sock)
+        return(int(a,10))
+
+    def write_string(sock, str):
+        sock.sendall(str.encode() + b'\0') 
+        # sock.sendall(b'\0') 
+
+    def write_number(sock, num):
+        a = str(num)
+        client.write_string(sock, a)
+    
+    def socket_cheatsheet():
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        try:
+            # 3) write() -> enviar petición al servidor
+            message_send = "String prueba"
+            client.write_string(sock, message_send)
+            message_send = 10
+            client.write_number(sock, message_send)
+
+            # 4) read() -> recibir respuesta del servidor
+            message_read = client.read_string(sock)
+            message_read = client.read_number(sock)
+
+            print(f"mensaje: {message_read}")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
 
 
     @staticmethod
     def  register(user) :
-        #  Write your code here
-        return client.RC.ERROR
+        # Comprobar user <= 256 bytes
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 2
+
+        try:
+            # 3) write() -> enviar petición al servidor
+            client.write_string(sock, "REGISTER")
+            client.write_string(sock, user)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("REGISTER OK")
+            elif return_code == 1:
+                print("USERNAME IN USE")
+            elif return_code == 2:
+                print("REGISTER FAIL")
+        except:
+            print("REGISTER FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
    
     @staticmethod
     def  unregister(user) :
-        #  Write your code here
-        return client.RC.ERROR
+        # Comprobar user <= 256 bytes
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 2
+
+        try:
+            # 3) write() -> enviar petición al servidor
+            client.write_string(sock, "UNREGISTER")
+            client.write_string(sock, user)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("UNREGISTER OK")
+            elif return_code == 1:
+                print("USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("UNREGISTER FAIL")
+        except:
+            print("UNREGISTER FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
 
-    
     @staticmethod
     def  connect(user) :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar user <= 256 bytes
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 3
+
+        try:
+            # 3) write() -> enviar petición al servidor
+
+            # TODO EMPEZAR EJECUCIÓN DE HILO
+
+            ip_user = socket.gethostbyname(socket.gethostbyname())
+            port_user = sock.getsockname()[1]
+
+            client.write_string(sock, "CONNECT")
+            client.write_string(sock, user)
+            client.write_string(sock, ip_user)
+            client.write_number(sock, port_user)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                client._active_user = user
+                print("CONNECT OK")
+            elif return_code == 1:
+                print("CONNECT FAIL, USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("USER ALREADY CONNECTED")
+            elif return_code == 3:
+                print("CONNECT FAIL")
+        except:
+            print("CONNECT FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
 
-    
     @staticmethod
     def  disconnect(user) :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar user <= 256 bytes
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 3
+
+        try:
+            # 3) write() -> enviar petición al servidor
+            
+            # TODO PARAR EJECUCIÓN DE HILO (INCLUSO CON ERRORES)
+
+            client.write_string(sock, "DISCONNECT")
+            client.write_string(sock, user)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("DISCONNECT OK")
+            elif return_code == 1:
+                print("DISCONNECT FAIL, USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("DISCONNECT FAIL, USER ALREADY CONNECTED")
+            elif return_code == 3:
+                print("DISCONNECT FAIL")
+        except:
+            print("DISCONNECT FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            client._active_user = None
+            sock.close()
+
+        return return_code
+
 
     @staticmethod
     def  publish(fileName,  description) :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar fileName <= 256 bytes
+        # TODO Comprobar description <= 256 bytes
+        # TODO Comprobar client._active_user != None
+
+        # Se envia una cadena con el path absoluto del fichero (esta cadena no podra contener 
+        # espacios en blanco). El tamaño maximo del path absoluto del fichero sera de 256bytes.
+
+        # Se envia una cadena de caracteres con la descripcion del contenido. Esta cadena
+        # podra contener espacios en blanco y su tamaño maximo sera de 256 bytes.
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 4
+
+        try:
+            # 3) write() -> enviar petición al servidor
+
+            client.write_string(sock, "PUBLISH")
+            client.write_string(sock, client._active_user)
+            client.write_string(sock, fileName)
+            client.write_number(sock, description)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("PUBLISH OK")
+            elif return_code == 1:
+                print("PUBLISH FAIL, USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("PUBLISH FAIL, USER NOT CONNECTED")
+            elif return_code == 3:
+                print("PUBLISH FAIL, CONTENT ALREADY PUBLISHED")
+            elif return_code == 4:
+                print("PUBLISH FAIL")
+        except:
+            print("PUBLISH FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
+
 
     @staticmethod
     def  delete(fileName) :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar fileName <= 256 bytes
+        # TODO Comprobar client._active_user != None
+
+        # Se envia una cadena con el path absoluto del fichero (esta cadena no podra contener 
+        # espacios en blanco). El tamaño maximo del path absoluto del fichero sera de 256bytes.
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 4
+
+        try:
+            # 3) write() -> enviar petición al servidor
+        
+            client.write_string(sock, "DELETE")
+            client.write_string(sock, client._active_user)
+            client.write_string(sock, fileName)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("DELETE OK")
+            elif return_code == 1:
+                print("DELETE FAIL, USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("DELETE FAIL, USER NOT CONNECTED")
+            elif return_code == 3:
+                print("DELETE FAIL, CONTENT NOT PUBLISHED")
+            elif return_code == 4:
+                print("DELETE FAIL")
+        except:
+            print("DELETE FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
     @staticmethod
     def  listusers() :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar client._active_user != None
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 3
+
+        try:
+            # 3) write() -> enviar petición al servidor
+
+            client.write_string(sock, "LIST_USERS")
+            client.write_string(sock, client._active_user)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("LIST_USERS OK")
+                num_users = client.read_number(sock)
+                # TODO imprimir database
+                # por cada cliente enviar a 3 cadenas de caracteres
+            elif return_code == 1:
+                print("LIST_USERS FAIL, USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("LIST_USERS FAIL, USER NOT CONNECTED")
+            elif return_code == 3:
+                print("LIST_USERS FAIL")
+        except:
+            print("LIST_USERS FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
     @staticmethod
     def  listcontent(user) :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar user <= 256 bytes
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el servidor
+        sock.connect(server_address)
+
+        return_code = 3
+
+        try:
+            # 3) write() -> enviar petición al servidor
+
+            client.write_string(sock, "LIST_USERS")
+            client.write_string(sock, client._active_user)
+            client.write_string(sock, user)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("LIST_CONTENT OK")
+                # TODO imprimir database
+                num_files = client.read_number(sock)
+                # Por cada fichero el servidor enviara una cadena de caracteres con el nombre del fichero 
+                # (el tamaño maximo del fichero es de 256 bytes).
+            elif return_code == 1:
+                print("LIST_CONTENT FAIL, USER DOES NOT EXIST")
+            elif return_code == 2:
+                print("LIST_CONTENT FAIL, USER NOT CONNECTED")
+            elif return_code == 3:
+                print("LIST_CONTENT FAIL, REMOTE USER DOES NOT EXIST")
+            else:
+                print("LIST_CONTENT FAIL")
+        except:
+            print("LIST_USERS FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
     @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :
-        #  Write your code here
-        return client.RC.ERROR
+        # TODO Comprobar user <= 256 bytes
+        # Comprobar remote_FileName <= 256 bytes (?)
+        # Comprobar local_FileName <= 256 bytes (?)
+
+        # TODO Llamada a LIST_USERS
+        code_listusers = client.listusers()
+        if code_listusers != 0:
+            print("GET_FILE FAIL")
+            return code_listusers
+
+        # TODO CONEXIÓN PEER TO PEER
+
+        # 1) socket() -> crear socket cliente
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (client._server, int(client._port))
+
+        # 2) connect() -> conexión con el otro cliente
+        sock.connect(server_address)
+
+        return_code = 2
+
+        try:
+            # 3) write() -> enviar petición al servidor
+            
+            # Llamada a GET_FILE
+
+            client.write_string(sock, "GET_FILE")
+            client.write_string(sock, remote_FileName)
+
+            # 4) read() -> recibir respuesta del servidor
+            return_code = client.read_number(sock)
+
+            if return_code == 0:
+                print("GET_FILE OK")
+                # imprimir database
+            elif return_code == 1:
+                print("GET_FILE FAIL, FILE NOT EXIST")
+            elif return_code == 2:
+                print("GET_FILE FAIL")
+        except:
+            print("GET_FILE FAIL")
+        finally:
+            # 5) close() -> cerrar sesión
+            sock.close()
+
+        return return_code
 
     # *
     # **
@@ -140,6 +533,7 @@ class client :
 
                     elif(line[0]=="QUIT") :
                         if (len(line) == 1) :
+                            # Check if connected -> DISCONNECT (username??? elimnar todos???)
                             break
                         else :
                             print("Syntax error. Use: QUIT")

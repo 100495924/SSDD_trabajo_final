@@ -94,7 +94,7 @@ class client :
                 print("REGISTER OK")
             elif return_code == 1:
                 print("USERNAME IN USE")
-            elif return_code == 2:
+            else:
                 print("REGISTER FAIL")
         except:
             print("REGISTER FAIL")
@@ -130,7 +130,7 @@ class client :
                 print("UNREGISTER OK")
             elif return_code == 1:
                 print("USER DOES NOT EXIST")
-            elif return_code == 2:
+            else:
                 print("UNREGISTER FAIL")
         except:
             print("UNREGISTER FAIL")
@@ -177,7 +177,7 @@ class client :
                 print("CONNECT FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
                 print("USER ALREADY CONNECTED")
-            elif return_code == 3:
+            else:
                 print("CONNECT FAIL")
         except:
             print("CONNECT FAIL")
@@ -218,7 +218,7 @@ class client :
                 print("DISCONNECT FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
                 print("DISCONNECT FAIL, USER ALREADY CONNECTED")
-            elif return_code == 3:
+            else:
                 print("DISCONNECT FAIL")
         except:
             print("DISCONNECT FAIL")
@@ -270,7 +270,7 @@ class client :
                 print("PUBLISH FAIL, USER NOT CONNECTED")
             elif return_code == 3:
                 print("PUBLISH FAIL, CONTENT ALREADY PUBLISHED")
-            elif return_code == 4:
+            else:
                 print("PUBLISH FAIL")
         except:
             print("PUBLISH FAIL")
@@ -316,7 +316,7 @@ class client :
                 print("DELETE FAIL, USER NOT CONNECTED")
             elif return_code == 3:
                 print("DELETE FAIL, CONTENT NOT PUBLISHED")
-            elif return_code == 4:
+            else:
                 print("DELETE FAIL")
         except:
             print("DELETE FAIL")
@@ -357,7 +357,7 @@ class client :
                 print("LIST_USERS FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
                 print("LIST_USERS FAIL, USER NOT CONNECTED")
-            elif return_code == 3:
+            else:
                 print("LIST_USERS FAIL")
         except:
             print("LIST_USERS FAIL")
@@ -448,10 +448,9 @@ class client :
 
             if return_code == 0:
                 print("GET_FILE OK")
-                # imprimir database
             elif return_code == 1:
                 print("GET_FILE FAIL, FILE NOT EXIST")
-            elif return_code == 2:
+            else:
                 print("GET_FILE FAIL")
         except:
             print("GET_FILE FAIL")

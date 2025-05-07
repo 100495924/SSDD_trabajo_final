@@ -4,6 +4,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+char *dirname_registered = "registered_users";
+char *dirname_active = "active_users";
+
 // -1 : error
 // 0 : directorio existe, archivo no
 // 1 : directorio existe, archivo también
@@ -89,8 +92,7 @@ int check_user_connected(char *user){
 }
 
 int register_user(char* user){
-    char *filepath;
-    filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    char filepath[300];
     sprintf(filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
@@ -123,14 +125,12 @@ int register_user(char* user){
         // el usuario existe
         return 1;
     }
-    free(filepath);
 
     return 0;
 }
 
 int unregister_user(char* user){
-    char *filepath;
-    filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    char filepath[300];
     sprintf(filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
@@ -148,7 +148,6 @@ int unregister_user(char* user){
         return 2;   // error
     }
 
-    free(filepath);
     return 0;
 }
 
@@ -261,8 +260,7 @@ int disconnect_user(char *user){
 
 int publish(char* user, char* file_path, char* description){
     // verificar que el usuario existe
-    char *user_filepath;
-    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    char user_filepath[300];
     sprintf(user_filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
@@ -325,15 +323,13 @@ int publish(char* user, char* file_path, char* description){
     if (fclose(user_file) < 0){
         return 4;   // error
     }
-    free(user_filepath);
 
     return 0;
 }
 
 int delete(char* user, char* file_path){
     // verificar que el usuario existe
-    char *user_filepath;
-    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    char user_filepath[300];
     sprintf(user_filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
@@ -449,7 +445,6 @@ int delete(char* user, char* file_path){
     if (fclose(user_file) < 0){
         return 4;   // error
     }
-    free(user_filepath);
 
     return 0;
 }
@@ -592,8 +587,7 @@ int list_users_get_info(struct ListUserInfo *info){
 
 int list_content_get_num(char *user){
     // verificar que el usuario existe
-    char *user_filepath;
-    user_filepath = malloc(sizeof(char) * (strlen(user) + strlen(dirname_registered) + 1));
+    char user_filepath[300];
     sprintf(user_filepath, "%s/%s", dirname_registered, user);
 
     // verificar antes si el archivo user existe
@@ -623,8 +617,6 @@ int list_content_get_num(char *user){
         }
     }
 
-
-    free(user_filepath);
     if (fclose(owner_file) < 0){
         return -2;  // error
     }
@@ -634,8 +626,7 @@ int list_content_get_num(char *user){
 
 int list_content(char* user, char* contents_owner, struct ListContentInfo* contents){
     // verificar que el usuario existe
-    char *user_filepath;
-    user_filepath = malloc(sizeof(char) * (strlen(contents_owner) + strlen(dirname_registered) + 1));
+    char user_filepath[300];
     sprintf(user_filepath, "%s/%s", dirname_registered, contents_owner);
 
     // verificar antes si el archivo user existe
@@ -692,14 +683,14 @@ int list_content(char* user, char* contents_owner, struct ListContentInfo* conte
     return 0;
 }
 
-int main(int argc, char const *argv[])
+/* int main(int argc, char const *argv[])
 {
     // char *usuario = "user/Francisco";
     // int res = unregister_user(usuario);
 
     struct ListContentInfo* contents;
     int n_files, status;
-    int res = register_user("Francisco");
+    int res = register_user("aaaaaaa");
     printf("Res: %d\n", res);
     res = register_user("Paco");
     printf("Res: %d\n", res);
@@ -708,9 +699,9 @@ int main(int argc, char const *argv[])
 
     printf("Res: %d\n", res);
 
-    /* res = publish("Francisco", "/usr/desktop/file_pataton", "Este archivo es una patata");
+    res = publish("Francisco", "/usr/desktop/file_pataton", "Este archivo es una patata");
     res = publish("Francisco", "/usr/desktop/file_patatatita", "Este archivo es una patata");
-    res = publish("Francisco", "/usr/desktop/file_patatatota", "Este archivo es una patata"); */
+    res = publish("Francisco", "/usr/desktop/file_patatatota", "Este archivo es una patata");
     //res = delete("Francisco", "/usr/desktop/file_pataton");
 
     // código para probar list_content
@@ -735,6 +726,6 @@ int main(int argc, char const *argv[])
     printf("status: %d\n", status);
 
     return 0;
-}
+} */
 
 

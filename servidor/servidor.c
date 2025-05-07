@@ -20,7 +20,7 @@ Protocolo:
 
 REGISTER <user_name> ==> 1 byte (0, 1 o 2)
 UNREGISTER <user_name> ==> 1 byte (0, 1 o 2)
-CONNECT <user_name> (<port>) ==> 1 byte (0, 1, 2 o 3)
+CONNECT <user_name> (<ip>) (<port>) ==> 1 byte (0, 1, 2 o 3)
 PUBLISH (<user_name>) <file_name> <description> ==> 1 byte (0, 1, 2, 3 o 4)
 DELETE (<user_name>) <file_name> ==> 1 byte (0, 1, 2, 3 o 4)
 LIST_USERS (<user_name>) ==> 1 byte (0, 1, 2 o 3) y USUARIOS 
@@ -80,13 +80,15 @@ void *servicio(){
 }
 
 void tratar_peticion(struct peticion *pet){
-    int error, status, n_files;     // n_files para list_content_get_num
+    int error, n_files;     // n_files para list_content_get_num
+    int status;
+    char status_str[2];
     long num_users = 0;  // para list_users_get_num
     struct ListContentInfo* contents;
     struct ListUserInfo* user_info;
     char port_user_string[10];
 
-    //printf("%s %s ", pet->command_str, pet->client_user_name);
+    //printf("%s %s %d", pet->command_str, pet->client_user_name, strcmp(pet->command_str, "REGISTER"));
     if (strcmp(pet->command_str, "REGISTER") == 0){
         // ejecutar REGISTER
         status = register_user(pet->client_user_name);
@@ -98,6 +100,7 @@ void tratar_peticion(struct peticion *pet){
     }else if (strcmp(pet->command_str, "CONNECT") == 0){
         // ejecutar CONNECT
         //printf("%s", pet->user_port);
+        status = connect_user(pet->client_user_name, pet->user_ip, pet->user_port);
 
     }else if (strcmp(pet->command_str, "PUBLISH") == 0){
         // ejecutar PUBLISH
@@ -152,12 +155,17 @@ void tratar_peticion(struct peticion *pet){
 
     }else if (strcmp(pet->command_str, "DISCONNECT") == 0){
         // ejecutar DISCONNECT
-
+        status = disconnect_user(pet->client_user_name);
     }
 
+    sprintf(status_str, "%d", status);
     // enviar byte status
-    if (write(pet->socket_pet, &status, sizeof(status)) < 0){
+    /* if (write(pet->socket_pet, &status, sizeof(status)) < 0){
         perror("[ERROR] Error al enviar status\n");
+        return;
+    } */
+    if (sendMessage(pet->socket_pet, status_str, 2) < 0){
+        close(pet->socket_pet);
         return;
     }
     // si command_str es LIST_USERS y status es 0 enviar usuarios

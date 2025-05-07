@@ -18,6 +18,9 @@ typedef struct peticion{
     // Nombre de usuario que realiza la operación (TODAS)
     char client_user_name[MAX_STR];
 
+    // ip del usuario que se conecta (CONNECT)
+    char user_ip[MAX_STR];
+
     // puerto del usuario que se conecta (CONNECT)
     char user_port[MAX_STR];
 

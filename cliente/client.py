@@ -2,6 +2,7 @@ from enum import Enum
 import argparse
 import socket
 import sys
+import threading
 
 class client :
 
@@ -21,6 +22,7 @@ class client :
     # connect -> set to user (only if OK)
     # disconnect -> set to None (always)
     _active_user = None
+    _database_listusers = []
 
     # ******************** METHODS *******************
     def read_string(sock):
@@ -43,6 +45,9 @@ class client :
     def write_number(sock, num):
         a = str(num)
         client.write_string(sock, a)
+    
+    def socket_server():
+        pass
     
     def socket_cheatsheet():
         # 1) socket() -> crear socket cliente
@@ -72,6 +77,8 @@ class client :
     @staticmethod
     def  register(user) :
         # Comprobar user <= 256 bytes
+        if len(user) >= 256:
+            raise Exception
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -108,6 +115,8 @@ class client :
     @staticmethod
     def  unregister(user) :
         # Comprobar user <= 256 bytes
+        if len(user) >= 256:
+            raise Exception
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -143,11 +152,23 @@ class client :
 
     @staticmethod
     def  connect(user) :
-        # TODO Comprobar user <= 256 bytes
+        # Comprobar user <= 256 bytes
+        if len(user) >= 256:
+            raise Exception
+        
+        # TODO EMPEZAR EJECUCIÓN DE HILO
+
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
+
+        ip_user = socket.gethostbyname(socket.gethostbyname())
+        port_user = sock.getsockname()[1]
+
+        # TODO CREATE THREAD
+
+
 
         # 2) connect() -> conexión con el servidor
         sock.connect(server_address)
@@ -156,12 +177,6 @@ class client :
 
         try:
             # 3) write() -> enviar petición al servidor
-
-            # TODO EMPEZAR EJECUCIÓN DE HILO
-
-            ip_user = socket.gethostbyname(socket.gethostbyname())
-            port_user = sock.getsockname()[1]
-
             client.write_string(sock, "CONNECT")
             client.write_string(sock, user)
             client.write_string(sock, ip_user)
@@ -190,7 +205,9 @@ class client :
 
     @staticmethod
     def  disconnect(user) :
-        # TODO Comprobar user <= 256 bytes
+        # Comprobar user <= 256 bytes
+        if len(user) >= 256:
+            raise Exception
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -232,9 +249,15 @@ class client :
 
     @staticmethod
     def  publish(fileName,  description) :
-        # TODO Comprobar fileName <= 256 bytes
-        # TODO Comprobar description <= 256 bytes
-        # TODO Comprobar client._active_user != None
+        # Comprobar fileName <= 256 bytes
+        if len(fileName) >= 256:
+            raise Exception
+        # Comprobar description <= 256 bytes
+        if len(description) >= 256:
+            raise Exception
+        # Comprobar client._active_user != None
+        if client._active_user == None:
+            raise Exception
 
         # Se envia una cadena con el path absoluto del fichero (esta cadena no podra contener 
         # espacios en blanco). El tamaño maximo del path absoluto del fichero sera de 256bytes.
@@ -283,8 +306,12 @@ class client :
 
     @staticmethod
     def  delete(fileName) :
-        # TODO Comprobar fileName <= 256 bytes
-        # TODO Comprobar client._active_user != None
+        # Comprobar fileName <= 256 bytes
+        if len(fileName) >= 256:
+            raise Exception
+        # Comprobar client._active_user != None
+        if client._active_user == None:
+            raise Exception
 
         # Se envia una cadena con el path absoluto del fichero (esta cadena no podra contener 
         # espacios en blanco). El tamaño maximo del path absoluto del fichero sera de 256bytes.
@@ -328,7 +355,9 @@ class client :
 
     @staticmethod
     def  listusers() :
-        # TODO Comprobar client._active_user != None
+        # Comprobar client._active_user != None
+        if client._active_user == None:
+            raise Exception
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -351,8 +380,24 @@ class client :
             if return_code == 0:
                 print("LIST_USERS OK")
                 num_users = client.read_number(sock)
-                # TODO imprimir database
-                # por cada cliente enviar a 3 cadenas de caracteres
+                # Imprimir database
+                client._database_listusers = []
+
+                user_info = {
+                    "username": "",
+                    "ip": "",
+                    "port": 0
+                }
+                # por cada cliente el servidor envía 3 cadenas de caracteres
+                # se almacenan en _data_listusers
+                for _ in range(num_users):
+                    user_info["username"] = client.read_string(sock)
+                    user_info["ip"] = client.read_string(sock)
+                    user_info["port"] = client.read_string(sock)
+                    client._database_listusers.append(user_info)
+                # imprimir en pantalla
+                for user in client._database_listusers:
+                    print(f"{user["username"]}\t{user["ip"]}\t{user["port"]}")
             elif return_code == 1:
                 print("LIST_USERS FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
@@ -369,7 +414,12 @@ class client :
 
     @staticmethod
     def  listcontent(user) :
-        # TODO Comprobar user <= 256 bytes
+        # Comprobar client._active_user != None
+        if client._active_user == None:
+            raise Exception
+        # Comprobar user <= 256 bytes
+        if len(user) >= 256:
+            raise Exception
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -392,10 +442,15 @@ class client :
 
             if return_code == 0:
                 print("LIST_CONTENT OK")
-                # TODO imprimir database
+                # Imprimir database
                 num_files = client.read_number(sock)
                 # Por cada fichero el servidor enviara una cadena de caracteres con el nombre del fichero 
-                # (el tamaño maximo del fichero es de 256 bytes).
+                # TODO tema descripcion???
+                for _ in num_files:
+                    file_name = client.read_string(sock)
+                    file_description = client.read_string(sock)
+                    print(file_name)
+
             elif return_code == 1:
                 print("LIST_CONTENT FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
@@ -414,24 +469,43 @@ class client :
 
     @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :
-        # TODO Comprobar user <= 256 bytes
-        # Comprobar remote_FileName <= 256 bytes (?)
+        # Comprobar user <= 256 bytes
+        if len(user) >= 256:
+            raise Exception
+        # Comprobar remote_FileName <= 256 bytes
+        if len(remote_FileName) >= 256:
+            raise Exception
         # Comprobar local_FileName <= 256 bytes (?)
+        if len(local_FileName) >= 256:
+            raise Exception
 
-        # TODO Llamada a LIST_USERS
+        # Llamada a LIST_USERS
         code_listusers = client.listusers()
+
         if code_listusers != 0:
             print("GET_FILE FAIL")
             return code_listusers
+        
 
         # TODO CONEXIÓN PEER TO PEER
 
         # 1) socket() -> crear socket cliente
+
+        # Conseguir IP y puerto de "user"
+        user_info = None
+        user_info_found = False
+        i = 0
+        if not user_info_found and i < len(client._database_listusers):
+            user_info = client._database_listusers[i]
+            if user_info["username"] == user:
+                user_info_found = True
+            i += 1
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_address = (client._server, int(client._port))
+        peer_address = (user_info["ip"], int(user_info["port"]))
 
         # 2) connect() -> conexión con el otro cliente
-        sock.connect(server_address)
+        sock.connect(peer_address)
 
         return_code = 2
 
@@ -448,6 +522,12 @@ class client :
 
             if return_code == 0:
                 print("GET_FILE OK")
+                # TODO En caso de codigo 0 el cliente remoto transferira:
+                # a) Una cadena de caracteres codificando el tamaño del fichero en bytes en decimal.
+                num_bytes_remote_file = client.read_number(sock)
+                # b) El contenido del archivo. El cliente local a medida que reciba el contenido del
+                # fichero lo ira almacenando en el fichero local que se ha pasado en la consola.
+
             elif return_code == 1:
                 print("GET_FILE FAIL, FILE NOT EXIST")
             else:
@@ -532,7 +612,9 @@ class client :
 
                     elif(line[0]=="QUIT") :
                         if (len(line) == 1) :
-                            # Check if connected -> DISCONNECT (username??? elimnar todos???)
+                            # Check if connected -> DISCONNECT
+                            if client._active_user != None:
+                                client.disconnect(client._active_user)
                             break
                         else :
                             print("Syntax error. Use: QUIT")

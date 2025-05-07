@@ -81,7 +81,10 @@ void *servicio(){
 
 void tratar_peticion(struct peticion *pet){
     int error, status, n_files;     // n_files para list_content_get_num
+    long num_users = 0;  // para list_users_get_num
     struct ListContentInfo* contents;
+    struct ListUserInfo* user_info;
+    char port_user_string[10];
 
     //printf("%s %s ", pet->command_str, pet->client_user_name);
     if (strcmp(pet->command_str, "REGISTER") == 0){
@@ -105,35 +108,33 @@ void tratar_peticion(struct peticion *pet){
         //printf("%s", pet->file_name);
 
     }else if (strcmp(pet->command_str, "LIST_USERS") == 0){
-        // RELLENAR CUANDO SE HAGA ESTA PARTE
-        // list_users_check(user)
+        list_users_check(pet->client_user_name)
         
         char connected_users[11];
-        long num_users = 0;
         int return_value = list_users_get_num(num_users);
 
         if (return_value != 0){
-            return return_value;
+            status = return_value;
         }
         if (sprintf(connected_users, "%ld", num_users) < 0){
-            return 3;
+            status = 3;
         }
 
-        struct ListUserInfo *users_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
-        if (users_info == NULL) {
-            return 3;
+        user_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
+        if (contents == NULL) {
+            status = 3;
         }
 
-        return_value = list_users_get_info(users_info);
+        return_value = list_users_get_info(user_info);
         if (return_value != 0){
-            free(users_info);
-            return return_value;
+            free(user_info);
+            status = return_value;
         }
 
         // RELLENAR CUANDO SE HAGA ESTA PARTE
         // mandar mensajes socket
 
-        free(users_info);
+        free(user_info);
 
     }else if (strcmp(pet->command_str, "LIST_CONTENT") == 0){
         // ejecutar LIST_CONTENT
@@ -160,16 +161,40 @@ void tratar_peticion(struct peticion *pet){
         return;
     }
     // si command_str es LIST_USERS y status es 0 enviar usuarios
+    if (strcmp(pet->command_str, "LIST_USERS") == 0 && status == 0){
+        for (int i=0; i<num_users; i++){
+            if (sendMessage(pet->socket_pet, user_info[i].file_path, strlen(user_info[i].user)) < 0){
+                free(user_info);
+                close(pet->socket_pet);
+                return;
+            }
+            if (sendMessage(pet->socket_pet, user_info[i].description, strlen(user_info[i].ip_user)) < 0){
+                free(user_info);
+                close(pet->socket_pet);
+                return;
+            }
+            if (sprintf(port_user_string, "%d", user_info[i].port_user) < 0){
+                return;
+            }
+            if (sendMessage(pet->socket_pet, port_user_string, strlen(port_user_string)) < 0){
+                free(user_info);
+                close(pet->socket_pet);
+                return;
+            }
+        }
+    }
 
     // si command_str es LIST_CONTENT y status es 0 enviar contenido 
     if (strcmp(pet->command_str, "LIST_CONTENT") == 0 && status == 0){
         for (int i=0; i<n_files; i++){
             // enviar contents[i].file_path y contents[i].description
             if (sendMessage(pet->socket_pet, contents[i].file_path, strlen(contents[i].file_path)) < 0){
+                free(contents);
                 close(pet->socket_pet);
                 return;
             }
             if (sendMessage(pet->socket_pet, contents[i].description, strlen(contents[i].description)) < 0){
+                free(contents);
                 close(pet->socket_pet);
                 return;
             }

@@ -8,11 +8,11 @@
 char *dirname_registered = "registered_users";
 char *dirname_active = "active_users";
 
-struct ListUserInfo {
+typedef struct ListUserInfo {
     char user[256];
     char ip_user[16];
     int port_user;
-};
+}ListUserInfo;
 
 typedef struct ListContentInfo{
     char file_path[256];

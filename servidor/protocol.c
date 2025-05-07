@@ -7,6 +7,23 @@
 #include "protocol.h"
 #include "lines.h"
 
+int str_to_long(char *long_str, char **endptr, int *resultado){
+    // Función para pasar de un string a un long haciendo las 
+    // comprobaciones de errores pertinentes
+    *resultado = strtol(long_str, endptr, 10);
+
+    // En realidad vamos a usar esta función para transformar string en int
+    if (*resultado > INT_MAX || *resultado < INT_MIN){
+        perror("strtol");
+        return -1;
+    }
+    if (*endptr == long_str){
+        fprintf(stderr, "No digits were found\n");
+        return -1;
+    }
+
+    return 0;
+}
 
 int read_to_pet(int socket, struct peticion *pet){
 
@@ -24,6 +41,11 @@ int read_to_pet(int socket, struct peticion *pet){
 
     if (strcmp(pet->command_str, "CONNECT") == 0){
         // Leer segundo argumento (puerto)
+        if (readLine(socket, pet->user_ip, MAX_MSG) < 0){
+            perror("ERROR: no se ha leido \n");
+            return -1;
+        }
+        
         if (readLine(socket, pet->user_port, MAX_MSG) < 0){
             perror("ERROR: no se ha leido \n");
             return -1;

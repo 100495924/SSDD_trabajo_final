@@ -37,8 +37,8 @@ class client :
         return(int(a,10))
 
     def write_string(sock, str):
-        sock.sendall(str.encode() + b'\0') 
-        # sock.sendall(b'\0') 
+        sock.sendall(str.encode()) 
+        sock.sendall(b'\0') 
 
     def write_number(sock, num):
         a = str(num)

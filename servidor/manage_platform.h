@@ -5,9 +5,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-char *dirname_registered = "registered_users";
-char *dirname_active = "active_users";
-
 struct ListUserInfo {
     char user[256];
     char ip_user[16];
@@ -36,6 +33,8 @@ int delete(char* user, char* file_path);
 int list_users_check(char* user); 
 int list_users_get_num(long* count);
 int list_users_get_info(struct ListUserInfo *info);
+
+int list_content_get_num(char *user);
 
 /// @param contents_owner username del dueño de los contenidos
 int list_content(char* user, char* contents_owner, struct ListContentInfo* contents);

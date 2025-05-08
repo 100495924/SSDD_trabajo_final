@@ -57,10 +57,10 @@ class client :
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         ip_user = socket.gethostbyname(socket.gethostname())
-        client._server_thread_port = sock.getsockname()[1]
-
-        server_address = (ip_user, client._server_thread_port)
+        server_address = (ip_user, 0)
         sock.bind(server_address)
+
+        client._server_thread_port = sock.getsockname()[1]
         sock.listen(5)
 
         while not event.is_set():

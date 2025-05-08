@@ -66,31 +66,32 @@ class client :
         while not event.is_set():
             connection, client_address = sock.accept()
             try:
-                message = client.read_string()
-                # message = message + "\0"}
+                message = client.read_string(connection)
 
                 if message == "GET_FILE":
                     # logica de mandar archivos
-                    remote_filename = client.read_string()
-                    remote_filesize = os.path.getsize(remote_filename)
-                    client.write_number(remote_filesize)
                     try:
+                        remote_filename = client.read_string(connection)
+                        remote_filesize = os.path.getsize(remote_filename)
+                        
                         file = open(remote_filename, "rb")
                     except Exception as e:
                         if type(e) == FileNotFoundError:
-                            client.write_number(1)
+                            client.write_number(connection, 1)
                         else:
-                            client.write_number(2)
+                            client.write_number(connection, 2)
                     else:
-                        data = file.read(remote_filesize)
+                        client.write_number(connection, 0)
+                        data = file.read()
                         if data:
-                            client.write_number(0)
-                            client.write_string(sock, data)
+                            client.write_number(connection, remote_filesize)
+                            connection.sendall(data)
                         else:
-                            client.write_number(2)
+                            client.write_number(connection, 2)
             except:
-                client.write_number(2)
+                client.write_number(connection, 2)
             finally:
+                file.close()
                 connection.close()
     
     def socket_cheatsheet():
@@ -412,7 +413,7 @@ class client :
         return return_code
 
     @staticmethod
-    def  listusers() :
+    def  listusers(print_users) :
         # Comprobar client._active_user != None
         if client._active_user == None:
             raise Exception
@@ -449,13 +450,15 @@ class client :
                 # por cada cliente el servidor envía 3 cadenas de caracteres
                 # se almacenan en _data_listusers
                 for _ in range(num_users):
-                    user_info["username"] = client.read_string(sock)
-                    user_info["ip"] = client.read_string(sock)
-                    user_info["port"] = client.read_string(sock)
-                    client._database_listusers.append(user_info)
+                    user_info_copy = user_info.copy()   # Copia del diccionario
+                    user_info_copy["username"] = client.read_string(sock)
+                    user_info_copy["ip"] = client.read_string(sock)
+                    user_info_copy["port"] = client.read_number(sock)
+                    client._database_listusers.append(user_info_copy)
                 # imprimir en pantalla
-                for user in client._database_listusers:
-                    print(f"{user['username']}\t{user['ip']}\t{user['port']}")
+                if print_users == True:
+                    for user in client._database_listusers:
+                        print(f"{user['username']}\t{user['ip']}\t{user['port']}")
             elif return_code == 1:
                 print("LIST_USERS FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
@@ -491,7 +494,7 @@ class client :
         try:
             # 3) write() -> enviar petición al servidor
 
-            client.write_string(sock, "LIST_USERS")
+            client.write_string(sock, "LIST_CONTENT")
             client.write_string(sock, client._active_user)
             client.write_string(sock, user)
 
@@ -504,7 +507,7 @@ class client :
                 num_files = client.read_number(sock)
                 # Por cada fichero el servidor enviara una cadena de caracteres con el nombre del fichero 
                 # TODO tema descripcion???
-                for _ in num_files:
+                for _ in range(num_files):
                     file_name = client.read_string(sock)
                     file_description = client.read_string(sock)
                     print(file_name)
@@ -538,7 +541,7 @@ class client :
             raise Exception
 
         # Llamada a LIST_USERS
-        code_listusers = client.listusers()
+        code_listusers = client.listusers(False)
 
         if code_listusers != 0:
             print("GET_FILE FAIL")
@@ -553,7 +556,7 @@ class client :
         user_info = None
         user_info_found = False
         i = 0
-        if not user_info_found and i < len(client._database_listusers):
+        while not user_info_found and i < len(client._database_listusers):
             user_info = client._database_listusers[i]
             if user_info["username"] == user:
                 user_info_found = True
@@ -585,9 +588,9 @@ class client :
                 num_bytes_remote_file = client.read_number(sock)
                 # b) El contenido del archivo. El cliente local a medida que reciba el contenido del
                 # fichero lo ira almacenando en el fichero local que se ha pasado en la consola.
-                with open(local_FileName, 'wb') as file:
+                with open(local_FileName, 'w+b') as file:
                     while True:
-                        data = client.recv(num_bytes_remote_file)
+                        data = sock.recv(num_bytes_remote_file+1)   # si hay bugs, poner +1 aquí a lo mejor ayuda
                         if not data:
                             break
                         file.write(data)
@@ -599,6 +602,7 @@ class client :
             print("GET_FILE FAIL")
         finally:
             # 5) close() -> cerrar sesión
+            file.close()
             sock.close()
 
         return return_code
@@ -651,7 +655,7 @@ class client :
 
                     elif(line[0]=="LIST_USERS") :
                         if (len(line) == 1) :
-                            client.listusers()
+                            client.listusers(True)
                         else :
                             print("Syntax error. Use: LIST_USERS")
 

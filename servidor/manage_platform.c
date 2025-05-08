@@ -3,6 +3,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <dirent.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 char *dirname_registered = "registered_users";
 char *dirname_active = "active_users";
@@ -491,8 +494,7 @@ int list_users_get_num(long* count){
     if (dir) {
         while ((entry = readdir(dir)) != NULL) {
             if (entry->d_type == DT_REG) {
-                // printf("%s - %d\n", entry->d_name, entry->d_type);
-                count++;
+                (*count)++;
             }
         }
         // Error de readdir()
@@ -682,50 +684,3 @@ int list_content(char* user, char* contents_owner, struct ListContentInfo* conte
 
     return 0;
 }
-
-/* int main(int argc, char const *argv[])
-{
-    // char *usuario = "user/Francisco";
-    // int res = unregister_user(usuario);
-
-    struct ListContentInfo* contents;
-    int n_files, status;
-    int res = register_user("aaaaaaa");
-    printf("Res: %d\n", res);
-    res = register_user("Paco");
-    printf("Res: %d\n", res);
-    res = connect_user("Paco", "10.128.1.253", 5000);
-    //int res = unregister_user("Francisco");
-
-    printf("Res: %d\n", res);
-
-    res = publish("Francisco", "/usr/desktop/file_pataton", "Este archivo es una patata");
-    res = publish("Francisco", "/usr/desktop/file_patatatita", "Este archivo es una patata");
-    res = publish("Francisco", "/usr/desktop/file_patatatota", "Este archivo es una patata");
-    //res = delete("Francisco", "/usr/desktop/file_pataton");
-
-    // código para probar list_content
-    n_files = list_content_get_num("Francisco");  // contar el número de entradas que tenemos que devolver
-    if (n_files == -1){
-        // el usuario cuyo contenido se quiere conocer no existe
-        status = 3;
-    }else if (n_files == -2){
-        status = 4; // error
-    }else{
-        contents = (struct ListContentInfo*) malloc(sizeof(struct ListContentInfo) * n_files);
-        status = list_content("Paco", "Francisco", contents);
-    }
-
-    if (status == 0){
-        for (int i=0; i<n_files; i++){
-            printf("%s %s", contents[i].file_path, contents[i].description);
-        }
-    }
-    
-
-    printf("status: %d\n", status);
-
-    return 0;
-} */
-
-

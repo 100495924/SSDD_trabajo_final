@@ -84,11 +84,12 @@ void tratar_peticion(struct peticion *pet){
     int status;
     char status_str[2];
     long num_users = 0;  // para list_users_get_num
+    char num_users_str[11];
+    char n_files_str[11];
     struct ListContentInfo* contents;
     struct ListUserInfo* user_info;
     char port_user_string[10];
 
-    //printf("%s %s %d", pet->command_str, pet->client_user_name, strcmp(pet->command_str, "REGISTER"));
     if (strcmp(pet->command_str, "REGISTER") == 0){
         // ejecutar REGISTER
         status = register_user(pet->client_user_name);
@@ -99,16 +100,15 @@ void tratar_peticion(struct peticion *pet){
 
     }else if (strcmp(pet->command_str, "CONNECT") == 0){
         // ejecutar CONNECT
-        //printf("%s", pet->user_port);
         status = connect_user(pet->client_user_name, pet->user_ip, atoi(pet->user_port));
 
     }else if (strcmp(pet->command_str, "PUBLISH") == 0){
         // ejecutar PUBLISH
-        //printf("%s %s", pet->file_name, pet->description);
+        status = publish(pet->client_user_name, pet->file_name, pet->description);
 
     }else if (strcmp(pet->command_str, "DELETE") == 0){
         // ejecutar DELETE
-        //printf("%s", pet->file_name);
+        status = delete(pet->client_user_name, pet->file_name);
 
     }else if (strcmp(pet->command_str, "LIST_USERS") == 0){
         list_users_check(pet->client_user_name);
@@ -118,30 +118,32 @@ void tratar_peticion(struct peticion *pet){
 
         if (return_value != 0){
             status = return_value;
-        }
-        if (sprintf(connected_users, "%ld", num_users) < 0){
-            status = 3;
-        }
-
-        user_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
-        if (contents == NULL) {
-            status = 3;
-        }
-
-        return_value = list_users_get_info(user_info);
-        if (return_value != 0){
-            free(user_info);
+        }else{
+            if (sprintf(connected_users, "%ld", num_users) < 0){
+                status = 3;
+            }
+    
+            user_info = (struct ListUserInfo*)malloc(num_users * sizeof(struct ListUserInfo));
+            if (user_info == NULL) {
+                status = 3;
+            }
+    
+            return_value = list_users_get_info(user_info);
+            if (return_value != 0){
+                free(user_info);
+                
+            }
             status = return_value;
+    
+            if (status != 0){
+                free(user_info);
+            }
         }
-
-        if (status != 0){
-            free(user_info);
-        }
+        
 
 
     }else if (strcmp(pet->command_str, "LIST_CONTENT") == 0){
         // ejecutar LIST_CONTENT
-        //printf("%s", pet->user_name);
         n_files = list_content_get_num(pet->user_name);  // contar el número de entradas que tenemos que devolver
         if (n_files == -1){
             // el usuario cuyo contenido se quiere conocer no existe
@@ -160,23 +162,24 @@ void tratar_peticion(struct peticion *pet){
 
     sprintf(status_str, "%d", status);
     // enviar byte status
-    /* if (write(pet->socket_pet, &status, sizeof(status)) < 0){
-        perror("[ERROR] Error al enviar status\n");
-        return;
-    } */
     if (sendMessage(pet->socket_pet, status_str, 2) < 0){
         close(pet->socket_pet);
         return;
     }
     // si command_str es LIST_USERS y status es 0 enviar usuarios
     if (strcmp(pet->command_str, "LIST_USERS") == 0 && status == 0){
+        sprintf(num_users_str, "%ld", num_users);
+        if (sendMessage(pet->socket_pet, num_users_str, strlen(num_users_str)+1) < 0){
+            close(pet->socket_pet);
+            return;
+        }
         for (int i=0; i<num_users; i++){
-            if (sendMessage(pet->socket_pet, user_info[i].user, strlen(user_info[i].user)) < 0){
+            if (sendMessage(pet->socket_pet, user_info[i].user, strlen(user_info[i].user)+1) < 0){
                 free(user_info);
                 close(pet->socket_pet);
                 return;
             }
-            if (sendMessage(pet->socket_pet, user_info[i].ip_user, strlen(user_info[i].ip_user)) < 0){
+            if (sendMessage(pet->socket_pet, user_info[i].ip_user, strlen(user_info[i].ip_user)+1) < 0){
                 free(user_info);
                 close(pet->socket_pet);
                 return;
@@ -184,34 +187,37 @@ void tratar_peticion(struct peticion *pet){
             if (sprintf(port_user_string, "%d", user_info[i].port_user) < 0){
                 return;
             }
-            if (sendMessage(pet->socket_pet, port_user_string, strlen(port_user_string)) < 0){
+            if (sendMessage(pet->socket_pet, port_user_string, strlen(port_user_string)+1) < 0){
                 free(user_info);
                 close(pet->socket_pet);
                 return;
             }
         }
+        free(user_info);
     }
 
     // si command_str es LIST_CONTENT y status es 0 enviar contenido 
     if (strcmp(pet->command_str, "LIST_CONTENT") == 0 && status == 0){
+        sprintf(n_files_str, "%d", n_files);
+        if (sendMessage(pet->socket_pet, n_files_str, strlen(n_files_str)+1) < 0){
+            close(pet->socket_pet);
+            return;
+        }
         for (int i=0; i<n_files; i++){
             // enviar contents[i].file_path y contents[i].description
-            if (sendMessage(pet->socket_pet, contents[i].file_path, strlen(contents[i].file_path)) < 0){
+            if (sendMessage(pet->socket_pet, contents[i].file_path, strlen(contents[i].file_path)+1) < 0){
                 free(contents);
                 close(pet->socket_pet);
                 return;
             }
-            if (sendMessage(pet->socket_pet, contents[i].description, strlen(contents[i].description)) < 0){
+            if (sendMessage(pet->socket_pet, contents[i].description, strlen(contents[i].description)+1) < 0){
                 free(contents);
                 close(pet->socket_pet);
                 return;
             }
-            //printf("%s %s", contents[i].file_path, contents[i].description);
         }
+        free(contents);
     }
-
-
-    //printf("\n");
 
     close(pet->socket_pet);     // Cerramos el socket del cliente
 }
@@ -318,7 +324,6 @@ int main(int argc, char const *argv[]){
     socket_len = sizeof(client_addr);
 
     for (;;){
-        printf("Esperando una conexión\n");
         // Aceptar la conexión de un cliente
         socket_cliente = accept(socket_servidor, (struct sockaddr * restrict) &client_addr, &socket_len);
         
@@ -328,7 +333,6 @@ int main(int argc, char const *argv[]){
         }
 
         error = 0;
-        printf("Atendiendo al cliente\n");
         // Atendiendo al cliente
         // receive mensaje por socket TCP
         error = read_to_pet(socket_cliente, &pet);

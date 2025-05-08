@@ -1,9 +1,6 @@
 #ifndef MANAGE_PLATFORM_H
 #define MANAGE_PLATFORM_H
 
-#include <dirent.h>
-#include <errno.h>
-#include <sys/stat.h>
 
 typedef struct ListUserInfo {
     char user[256];

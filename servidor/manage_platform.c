@@ -13,9 +13,9 @@ char *dirname_active = "active_users";
 // 2 : directorio no existe (archivo tampoco)
 int is_file_in_directory(char *dirname, char *filepath){
     // Directorio "active_users" existe?
+    errno = 0;
     DIR* dir = opendir(dirname);
     int result;
-    errno = 0;
     
     // Directorio existe
     if (dir) {

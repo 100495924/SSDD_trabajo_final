@@ -100,7 +100,7 @@ void tratar_peticion(struct peticion *pet){
     }else if (strcmp(pet->command_str, "CONNECT") == 0){
         // ejecutar CONNECT
         //printf("%s", pet->user_port);
-        status = connect_user(pet->client_user_name, pet->user_ip, pet->user_port);
+        status = connect_user(pet->client_user_name, pet->user_ip, atoi(pet->user_port));
 
     }else if (strcmp(pet->command_str, "PUBLISH") == 0){
         // ejecutar PUBLISH
@@ -111,10 +111,10 @@ void tratar_peticion(struct peticion *pet){
         //printf("%s", pet->file_name);
 
     }else if (strcmp(pet->command_str, "LIST_USERS") == 0){
-        list_users_check(pet->client_user_name)
+        list_users_check(pet->client_user_name);
         
         char connected_users[11];
-        int return_value = list_users_get_num(num_users);
+        int return_value = list_users_get_num(&num_users);
 
         if (return_value != 0){
             status = return_value;
@@ -134,10 +134,10 @@ void tratar_peticion(struct peticion *pet){
             status = return_value;
         }
 
-        // RELLENAR CUANDO SE HAGA ESTA PARTE
-        // mandar mensajes socket
+        if (status != 0){
+            free(user_info);
+        }
 
-        free(user_info);
 
     }else if (strcmp(pet->command_str, "LIST_CONTENT") == 0){
         // ejecutar LIST_CONTENT
@@ -171,12 +171,12 @@ void tratar_peticion(struct peticion *pet){
     // si command_str es LIST_USERS y status es 0 enviar usuarios
     if (strcmp(pet->command_str, "LIST_USERS") == 0 && status == 0){
         for (int i=0; i<num_users; i++){
-            if (sendMessage(pet->socket_pet, user_info[i].file_path, strlen(user_info[i].user)) < 0){
+            if (sendMessage(pet->socket_pet, user_info[i].user, strlen(user_info[i].user)) < 0){
                 free(user_info);
                 close(pet->socket_pet);
                 return;
             }
-            if (sendMessage(pet->socket_pet, user_info[i].description, strlen(user_info[i].ip_user)) < 0){
+            if (sendMessage(pet->socket_pet, user_info[i].ip_user, strlen(user_info[i].ip_user)) < 0){
                 free(user_info);
                 close(pet->socket_pet);
                 return;

@@ -1,8 +1,11 @@
 from enum import Enum
 import argparse
+import os
 import socket
 import sys
 import threading
+from threading import Event
+from threading import Thread
 
 class client :
 
@@ -23,6 +26,9 @@ class client :
     # disconnect -> set to None (always)
     _active_user = None
     _database_listusers = []
+    _stop_event = Event()
+    _server_thread = None
+    _server_thread_port = None
 
     # ******************** METHODS *******************
     def read_string(sock):
@@ -46,8 +52,46 @@ class client :
         a = str(num)
         client.write_string(sock, a)
     
-    def socket_server():
-        pass
+    def socket_server(event):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        ip_user = socket.gethostbyname(socket.gethostname())
+        client._server_thread_port = sock.getsockname()[1]
+
+        server_address = (ip_user, client._server_thread_port)
+        sock.bind(server_address)
+        sock.listen(5)
+
+        while not event.is_set():
+            connection, client_address = sock.accept()
+            try:
+                message = client.read_string()
+                # message = message + "\0"}
+
+                if message == "GET_FILE":
+                    # logica de mandar archivos
+                    remote_filename = client.read_string()
+                    remote_filesize = os.path.getsize(remote_filename)
+                    client.write_number(remote_filesize)
+                    try:
+                        file = open(remote_filename, "rb")
+                    except Exception as e:
+                        if type(e) == FileNotFoundError:
+                            client.write_number(1)
+                        else:
+                            client.write_number(2)
+                    else:
+                        data = file.read(remote_filesize)
+                        if data:
+                            client.write_number(0)
+                            client.write_string(sock, data)
+                        else:
+                            client.write_number(2)
+            except:
+                client.write_number(2)
+            finally:
+                connection.close()
     
     def socket_cheatsheet():
         # 1) socket() -> crear socket cliente
@@ -155,20 +199,27 @@ class client :
         # Comprobar user <= 256 bytes
         if len(user) >= 256:
             raise Exception
+        if client._server_thread != None:
+            raise Exception
         
         # TODO EMPEZAR EJECUCIÓN DE HILO
-
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        ip_user = socket.gethostbyname(socket.gethostbyname())
-        port_user = sock.getsockname()[1]
+        ip_user = socket.gethostbyname(socket.gethostname())
+        # port_user = sock.getsockname()[1]
 
         # TODO CREATE THREAD
 
+        client._server_thread_port = None
+        client._stop_event.clear()
+        client._server_thread = Thread(target=client.socket_server, args=(client._stop_event,), daemon=True)
+        client._server_thread.start()
 
+        while client._server_thread_port == None:
+            pass
 
         # 2) connect() -> conexión con el servidor
         sock.connect(server_address)
@@ -180,7 +231,7 @@ class client :
             client.write_string(sock, "CONNECT")
             client.write_string(sock, user)
             client.write_string(sock, ip_user)
-            client.write_number(sock, port_user)
+            client.write_number(sock, client._server_thread_port)
 
             # 4) read() -> recibir respuesta del servidor
             return_code = client.read_number(sock)
@@ -242,6 +293,13 @@ class client :
         finally:
             # 5) close() -> cerrar sesión
             client._active_user = None
+
+            if (client._server_thread != None):
+                client._stop_event.set()
+                # client._server_thread.join()
+                client._server_thread = None
+                client._server_thread_port = None
+
             sock.close()
 
         return return_code
@@ -397,7 +455,7 @@ class client :
                     client._database_listusers.append(user_info)
                 # imprimir en pantalla
                 for user in client._database_listusers:
-                    print(f"{user["username"]}\t{user["ip"]}\t{user["port"]}")
+                    print(f"{user['username']}\t{user['ip']}\t{user['port']}")
             elif return_code == 1:
                 print("LIST_USERS FAIL, USER DOES NOT EXIST")
             elif return_code == 2:
@@ -460,7 +518,7 @@ class client :
             else:
                 print("LIST_CONTENT FAIL")
         except:
-            print("LIST_USERS FAIL")
+            print("LIST_CONTENT FAIL")
         finally:
             # 5) close() -> cerrar sesión
             sock.close()
@@ -527,7 +585,12 @@ class client :
                 num_bytes_remote_file = client.read_number(sock)
                 # b) El contenido del archivo. El cliente local a medida que reciba el contenido del
                 # fichero lo ira almacenando en el fichero local que se ha pasado en la consola.
-
+                with open(local_FileName, 'wb') as file:
+                    while True:
+                        data = client.recv(num_bytes_remote_file)
+                        if not data:
+                            break
+                        file.write(data)
             elif return_code == 1:
                 print("GET_FILE FAIL, FILE NOT EXIST")
             else:

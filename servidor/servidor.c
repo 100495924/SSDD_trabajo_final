@@ -219,6 +219,14 @@ void tratar_peticion(struct peticion *pet){
         free(contents);
     }
 
+    char date_hour[22];
+    if (readLine(pet->socket_pet, date_hour, MAX_MSG) < 0){
+        perror("ERROR: no se ha leido \n");
+        close(pet->socket_pet);
+        return;
+    }
+    printf("%s\n", date_hour);
+
     close(pet->socket_pet);     // Cerramos el socket del cliente
 }
 

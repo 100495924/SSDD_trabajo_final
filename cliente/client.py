@@ -4,6 +4,7 @@ import os
 import socket
 import sys
 import threading
+import zeep
 from threading import Event
 from threading import Thread
 
@@ -94,6 +95,11 @@ class client :
                 file.close()
                 connection.close()
     
+    def get_date_hour():
+        wsdl = 'http://localhost:30000/?wsdl'
+        zepp_client = zeep.Client(wsdl=wsdl)
+        return zepp_client.service.send_date_hour()
+
     def socket_cheatsheet():
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -152,6 +158,8 @@ class client :
             print("REGISTER FAIL")
         finally:
             # 5) close() -> cerrar sesión
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
             sock.close()
 
         return return_code
@@ -190,6 +198,8 @@ class client :
             print("UNREGISTER FAIL")
         finally:
             # 5) close() -> cerrar sesión
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
             sock.close()
 
         return return_code
@@ -250,6 +260,8 @@ class client :
             print("CONNECT FAIL")
         finally:
             # 5) close() -> cerrar sesión
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
             sock.close()
 
         return return_code
@@ -260,6 +272,7 @@ class client :
         # Comprobar user <= 256 bytes
         if len(user) >= 256:
             raise Exception
+
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -295,7 +308,12 @@ class client :
             # 5) close() -> cerrar sesión
             client._active_user = None
 
-            if (client._server_thread != None):
+            # Recibir fecha y hora por servicio web y enviarlo al servidor
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
+
+            # destruir thread para detectar get_file
+            if (client._server_thread != None): 
                 client._stop_event.set()
                 # client._server_thread.join()
                 client._server_thread = None
@@ -357,6 +375,10 @@ class client :
         except:
             print("PUBLISH FAIL")
         finally:
+            # Recibir fecha y hora por servicio web y enviarlo al servidor
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
+
             # 5) close() -> cerrar sesión
             sock.close()
 
@@ -407,6 +429,10 @@ class client :
         except:
             print("DELETE FAIL")
         finally:
+            # Recibir fecha y hora por servicio web y enviarlo al servidor
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
+
             # 5) close() -> cerrar sesión
             sock.close()
 
@@ -468,6 +494,10 @@ class client :
         except:
             print("LIST_USERS FAIL")
         finally:
+            # Recibir fecha y hora por servicio web y enviarlo al servidor
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
+
             # 5) close() -> cerrar sesión
             sock.close()
 
@@ -523,6 +553,10 @@ class client :
         except:
             print("LIST_CONTENT FAIL")
         finally:
+            # Recibir fecha y hora por servicio web y enviarlo al servidor
+            date_hour_str = client.get_date_hour()
+            client.write_string(sock, date_hour_str)
+
             # 5) close() -> cerrar sesión
             sock.close()
 

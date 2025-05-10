@@ -378,7 +378,7 @@ class client :
             # Recibir fecha y hora por servicio web y enviarlo al servidor
             date_hour_str = client.get_date_hour()
             client.write_string(sock, date_hour_str)
-
+        
             # 5) close() -> cerrar sesión
             sock.close()
 

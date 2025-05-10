@@ -4,6 +4,8 @@
 #define MAX_STR 256
 #define MAX_VECTOR 32
 
+int send_log(char *username, char *operation, char *filename, char *date_time);
+
 typedef struct peticion{
 
     // socket del cliente, usado para pasar 

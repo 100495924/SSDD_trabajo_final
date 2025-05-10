@@ -9,3 +9,9 @@ active_users
 registered_users
 patata.png
 patatita.txt
+rpc/servidor-rpc
+rpc/rpc_logger_svc.o
+rpc/rpc_logger_server.o
+rpc_logger_xdr.o
+servidor/rpc_logger_client.o
+servidor/rpc_logger_clnt.o

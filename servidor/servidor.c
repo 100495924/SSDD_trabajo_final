@@ -1,4 +1,4 @@
-#include "comm_sock.h"
+#include "../comm_sock.h"
 #include "protocol.h"
 #include "lines.h"
 #include "manage_platform.h"
@@ -219,6 +219,7 @@ void tratar_peticion(struct peticion *pet){
         free(contents);
     }
 
+    // recibir la fecha y hora del cliente
     char date_hour[22];
     if (readLine(pet->socket_pet, date_hour, MAX_MSG) < 0){
         perror("ERROR: no se ha leido \n");
@@ -226,6 +227,20 @@ void tratar_peticion(struct peticion *pet){
         return;
     }
     printf("%s\n", date_hour);
+
+    // enviar un log al servidor rpc
+    if (strcmp(pet->command_str, "PUBLISH") == 0 || strcmp(pet->command_str, "DELETE") == 0){
+        if (send_log(pet->client_user_name, pet->command_str, pet->file_name, date_hour) < 0){
+            close(pet->socket_pet);
+            return;
+        }
+    }else{
+        if (send_log(pet->client_user_name, pet->command_str, "", date_hour) < 0){
+            close(pet->socket_pet);
+            return;
+        }
+    }
+    
 
     close(pet->socket_pet);     // Cerramos el socket del cliente
 }

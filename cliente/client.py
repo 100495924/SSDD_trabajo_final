@@ -22,16 +22,23 @@ class client :
     _server = None
     _port = -1
 
+
+    _registered = []
+
     # se usa para saber el username activo
     # connect -> set to user (only if OK)
     # disconnect -> set to None (always)
     _active_user = None
+
     _database_listusers = []
     _stop_event = Event()
     _server_thread = None
     _server_thread_port = None
 
     # ******************** METHODS *******************
+
+    # Funciones para escribir y leer en los sockets
+
     def read_string(sock):
         a = ''
         while True:
@@ -53,6 +60,7 @@ class client :
         a = str(num)
         client.write_string(sock, a)
     
+    # Función que ejecuta el segundo hilo que se crea al hacer CONNECT
     def socket_server(event):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -65,82 +73,97 @@ class client :
         sock.listen(5)
 
         while not event.is_set():
-            connection, client_address = sock.accept()
             try:
+                connection, client_address = sock.accept()
                 message = client.read_string(connection)
-
-                if message == "GET_FILE":
-                    # logica de mandar archivos
-                    try:
-                        remote_filename = client.read_string(connection)
-                        remote_filesize = os.path.getsize(remote_filename)
-                        
-                        file = open(remote_filename, "rb")
-                    except Exception as e:
-                        if type(e) == FileNotFoundError:
-                            client.write_number(connection, 1)
-                        else:
-                            client.write_number(connection, 2)
-                    else:
-                        client.write_number(connection, 0)
-                        data = file.read()
-                        if data:
-                            client.write_number(connection, remote_filesize)
-                            connection.sendall(data)
-                        else:
-                            client.write_number(connection, 2)
             except:
                 client.write_number(connection, 2)
-            finally:
-                file.close()
                 connection.close()
+                continue
+
+            if message == "GET_FILE":
+                # logica de mandar archivos
+                try:
+                    remote_filename = client.read_string(connection)
+                    # El archivo local no puede ser un directorio y el camino hacia él por los directorios debe existir
+                    # Permitimos que el archivo en sí no exista
+                    if remote_filename[-1] != "/" and os.path.exists(os.path.dirname(remote_filename)):
+                        remote_filesize = os.path.getsize(remote_filename)
+                        file = open(remote_filename, "rb")
+                    else:
+                        raise FileNotFoundError
+                    
+                    # remote_filesize = os.path.getsize(remote_filename)
+                except Exception as e:
+                    if type(e) == FileNotFoundError:
+                        client.write_number(connection, 1)
+                    else:
+                        client.write_number(connection, 2)
+                    connection.close()
+                else:
+                    client.write_number(connection, 0)
+                    data = file.read()
+                    if data:
+                        client.write_number(connection, remote_filesize)
+                        connection.sendall(data)
+                    else:
+                        client.write_number(connection, 2)
+
+                    file.close()
+                    connection.close()
     
+    # Función para el servicio web
     def get_date_hour():
         wsdl = 'http://localhost:30000/?wsdl'
         zepp_client = zeep.Client(wsdl=wsdl)
         return zepp_client.service.send_date_hour()
 
-    def socket_cheatsheet():
-        # 1) socket() -> crear socket cliente
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_address = (client._server, int(client._port))
+    # def socket_cheatsheet():
+    #     # 1) socket() -> crear socket cliente
+    #     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+    #     # 2) connect() -> conexión con el servidor
+    #     sock.connect(server_address)
 
-        try:
-            # 3) write() -> enviar petición al servidor
-            message_send = "String prueba"
-            client.write_string(sock, message_send)
-            message_send = 10
-            client.write_number(sock, message_send)
+    #     try:
+    #         # 3) write() -> enviar petición al servidor
+    #         message_send = "String prueba"
+    #         client.write_string(sock, message_send)
+    #         message_send = 10
+    #         client.write_number(sock, message_send)
 
-            # 4) read() -> recibir respuesta del servidor
-            message_read = client.read_string(sock)
-            message_read = client.read_number(sock)
+    #         # 4) read() -> recibir respuesta del servidor
+    #         message_read = client.read_string(sock)
+    #         message_read = client.read_number(sock)
 
-            print(f"mensaje: {message_read}")
-        finally:
-            # 5) close() -> cerrar sesión
-            sock.close()
-
+    #         print(f"mensaje: {message_read}")
+    #     finally:
+    #         # 5) close() -> cerrar sesión
+    #         sock.close()
 
     @staticmethod
     def  register(user) :
-        # Comprobar user <= 256 bytes
-        if len(user) >= 256:
-            raise Exception
+        return_code = 2
 
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
+        if len(user) >= 256:
+            print("REGISTER FAIL")
+            return return_code
+        
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
-
-        return_code = 2
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("REGISTER FAIL")
+            return return_code
 
         try:
+
             # 3) write() -> enviar petición al servidor
             client.write_string(sock, "REGISTER")
             client.write_string(sock, user)
@@ -149,6 +172,7 @@ class client :
             return_code = client.read_number(sock)
 
             if return_code == 0:
+                client._registered.append(user)
                 print("REGISTER OK")
             elif return_code == 1:
                 print("USERNAME IN USE")
@@ -167,18 +191,33 @@ class client :
    
     @staticmethod
     def  unregister(user) :
-        # Comprobar user <= 256 bytes
+        return_code = 2
+
+        if client._active_user == user:
+            code_disconnect = client.disconnect(user, False)
+            if code_disconnect == 1:
+                print("USER DOES NOT EXIST")
+                return code_disconnect
+            elif code_disconnect == 3:
+                print("UNREGISTER FAIL")
+                return code_disconnect
+            # print("UNREGISTER FAIL")
+            # return return_code
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
         if len(user) >= 256:
-            raise Exception
+            print("UNREGISTER FAIL")
+            return return_code
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
-
-        return_code = 2
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("UNREGISTER FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -189,6 +228,7 @@ class client :
             return_code = client.read_number(sock)
 
             if return_code == 0:
+                client._registered.remove(user)
                 print("UNREGISTER OK")
             elif return_code == 1:
                 print("USER DOES NOT EXIST")
@@ -207,13 +247,19 @@ class client :
 
     @staticmethod
     def  connect(user) :
-        # Comprobar user <= 256 bytes
+        return_code = 3
+
+        # Si ya estás conectado a un usuario, no puedes conectarte otra vez (al mismo u otro usuario)
+        if client._active_user != None:
+            print("USER ALREADY CONNECTED")
+            return_code = 2
+            return return_code    
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
         if len(user) >= 256:
-            raise Exception
-        if client._server_thread != None:
-            raise Exception
+            print("CONNECT FAIL")
+            return return_code
         
-        # TODO EMPEZAR EJECUCIÓN DE HILO
+        # EMPEZAR EJECUCIÓN DE HILO
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -222,7 +268,7 @@ class client :
         ip_user = socket.gethostbyname(socket.gethostname())
         # port_user = sock.getsockname()[1]
 
-        # TODO CREATE THREAD
+        # CREAR SERVER THREAD
 
         client._server_thread_port = None
         client._stop_event.clear()
@@ -232,10 +278,12 @@ class client :
         while client._server_thread_port == None:
             pass
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
-
-        return_code = 3
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("CONNECT FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -268,25 +316,30 @@ class client :
 
 
     @staticmethod
-    def  disconnect(user) :
-        # Comprobar user <= 256 bytes
-        if len(user) >= 256:
-            raise Exception
+    def  disconnect(user, print_result) :
+        return_code = 3
 
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
+        if len(user) >= 256:
+            if print_result:
+                print("DISCONNECT FAIL")
+            return return_code
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
-
-        return_code = 3
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("DISCONNECT FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
             
-            # TODO PARAR EJECUCIÓN DE HILO (INCLUSO CON ERRORES)
+            # PARAR EJECUCIÓN DE SERVER THREAD (INCLUSO CON ERRORES)
 
             client.write_string(sock, "DISCONNECT")
             client.write_string(sock, user)
@@ -294,16 +347,18 @@ class client :
             # 4) read() -> recibir respuesta del servidor
             return_code = client.read_number(sock)
 
-            if return_code == 0:
-                print("DISCONNECT OK")
-            elif return_code == 1:
-                print("DISCONNECT FAIL, USER DOES NOT EXIST")
-            elif return_code == 2:
-                print("DISCONNECT FAIL, USER ALREADY CONNECTED")
-            else:
-                print("DISCONNECT FAIL")
+            if print_result:
+                if return_code == 0:
+                    print("DISCONNECT OK")
+                elif return_code == 1:
+                    print("DISCONNECT FAIL, USER DOES NOT EXIST")
+                elif return_code == 2:
+                    print("DISCONNECT FAIL, USER NOT CONNECTED")
+                else:
+                    print("DISCONNECT FAIL")
         except:
-            print("DISCONNECT FAIL")
+            if print_result:
+                print("DISCONNECT FAIL")
         finally:
             # 5) close() -> cerrar sesión
             client._active_user = None
@@ -315,7 +370,6 @@ class client :
             # destruir thread para detectar get_file
             if (client._server_thread != None): 
                 client._stop_event.set()
-                # client._server_thread.join()
                 client._server_thread = None
                 client._server_thread_port = None
 
@@ -326,15 +380,21 @@ class client :
 
     @staticmethod
     def  publish(fileName,  description) :
-        # Comprobar fileName <= 256 bytes
-        if len(fileName) >= 256:
-            raise Exception
-        # Comprobar description <= 256 bytes
-        if len(description) >= 256:
-            raise Exception
-        # Comprobar client._active_user != None
+        return_code = 4
+
+        # La operación solo se puede realizar si se esta registrado y conectado
+        # Decidimos no mandar None por socket porque puede crear conflictos en el servidor
         if client._active_user == None:
-            raise Exception
+            if client._active_user in client._registered:
+                print("PUBLISH FAIL, USER NOT CONNECTED")
+                return 2
+            else:
+                print("PUBLISH FAIL, USER DOES NOT EXIST")
+                return 1
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
+        if len(fileName) >= 256 or len(description) >= 256:
+            print("PUBLISH FAIL")
+            return return_code
 
         # Se envia una cadena con el path absoluto del fichero (esta cadena no podra contener 
         # espacios en blanco). El tamaño maximo del path absoluto del fichero sera de 256bytes.
@@ -346,10 +406,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
-
-        return_code = 4
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("PUBLISH FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -387,12 +449,21 @@ class client :
 
     @staticmethod
     def  delete(fileName) :
-        # Comprobar fileName <= 256 bytes
-        if len(fileName) >= 256:
-            raise Exception
-        # Comprobar client._active_user != None
+        return_code = 4
+
+        # La operación solo se puede realizar si se esta registrado y conectado
+        # Decidimos no mandar None por socket porque puede crear conflictos en el servidor
         if client._active_user == None:
-            raise Exception
+            if client._active_user in client._registered:
+                print("DELETE FAIL, USER NOT CONNECTED")
+                return 2
+            else:
+                print("DELETE FAIL, USER DOES NOT EXIST")
+                return 1
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
+        if len(fileName) >= 256:
+            print("DELETE FAIL")
+            return return_code
 
         # Se envia una cadena con el path absoluto del fichero (esta cadena no podra contener 
         # espacios en blanco). El tamaño maximo del path absoluto del fichero sera de 256bytes.
@@ -401,10 +472,13 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("DELETE FAIL")
+            return return_code
 
-        return_code = 4
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -440,18 +514,29 @@ class client :
 
     @staticmethod
     def  listusers(print_users) :
-        # Comprobar client._active_user != None
+        return_code = 3
+
+        # La operación solo se puede realizar si se esta registrado y conectado
+        # Decidimos no mandar None por socket porque puede crear conflictos en el servidor
         if client._active_user == None:
-            raise Exception
+            if client._active_user in client._registered:
+                print("LIST_USERS FAIL, USER NOT CONNECTED")
+                return 2
+            else:
+                print("LIST_USERS FAIL, USER DOES NOT EXIST")
+                return 1
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("LIST_USERS FAIL")
+            return return_code
 
-        return_code = 3
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -463,7 +548,6 @@ class client :
             return_code = client.read_number(sock)
 
             if return_code == 0:
-                print("LIST_USERS OK")
                 num_users = client.read_number(sock)
                 # Imprimir database
                 client._database_listusers = []
@@ -482,14 +566,15 @@ class client :
                     user_info_copy["port"] = client.read_number(sock)
                     client._database_listusers.append(user_info_copy)
                 # imprimir en pantalla
-                if print_users == True:
+                if print_users:
+                    print("LIST_USERS OK")
                     for user in client._database_listusers:
                         print(f"{user['username']}\t{user['ip']}\t{user['port']}")
-            elif return_code == 1:
+            elif return_code == 1 and print_users:
                 print("LIST_USERS FAIL, USER DOES NOT EXIST")
-            elif return_code == 2:
+            elif return_code == 2 and print_users:
                 print("LIST_USERS FAIL, USER NOT CONNECTED")
-            else:
+            elif print_users:
                 print("LIST_USERS FAIL")
         except:
             print("LIST_USERS FAIL")
@@ -505,21 +590,33 @@ class client :
 
     @staticmethod
     def  listcontent(user) :
-        # Comprobar client._active_user != None
+        return_code = 4
+
+        # La operación solo se puede realizar si se esta registrado y conectado
+        # Decidimos no mandar None por socket porque puede crear conflictos en el servidor
         if client._active_user == None:
-            raise Exception
-        # Comprobar user <= 256 bytes
+            if client._active_user in client._registered:
+                print("LIST_CONTENT FAIL, USER NOT CONNECTED")
+                return 2
+            else:
+                print("LIST_CONTENT FAIL, USER DOES NOT EXIST")
+                return 1
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
         if len(user) >= 256:
-            raise Exception
+            print("LIST_CONTENT FAIL")
+            return return_code
 
         # 1) socket() -> crear socket cliente
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("LIST_CONTENT FAIL")
+            return return_code
 
-        return_code = 3
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -536,7 +633,6 @@ class client :
                 # Imprimir database
                 num_files = client.read_number(sock)
                 # Por cada fichero el servidor enviara una cadena de caracteres con el nombre del fichero 
-                # TODO tema descripcion???
                 for _ in range(num_files):
                     file_name = client.read_string(sock)
                     file_description = client.read_string(sock)
@@ -564,25 +660,30 @@ class client :
 
     @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :
-        # Comprobar user <= 256 bytes
-        if len(user) >= 256:
-            raise Exception
-        # Comprobar remote_FileName <= 256 bytes
-        if len(remote_FileName) >= 256:
-            raise Exception
-        # Comprobar local_FileName <= 256 bytes (?)
-        if len(local_FileName) >= 256:
-            raise Exception
+        return_code = 2
 
+        # El usuario remoto no puedes ser tú mismo
+        if client._active_user == user:
+            print("GET_FILE FAIL")
+            return return_code
+        # Los inputs deben tener máximo 256 bytes (255 caracteres + "\0")
+        if len(user) >= 256 or len(remote_FileName) >= 256 or len(local_FileName) >= 256:
+            print("GET_FILE FAIL")
+            return return_code
+        # El archivo local no puede ser un directorio y el camino hacia él por los directorios debe existir
+        # Permitimos que el archivo en sí no exista
+        if not (local_FileName[-1] != "/" and os.path.exists(os.path.dirname(local_FileName))):
+            print("GET_FILE FAIL")
+            return return_code
+            
         # Llamada a LIST_USERS
+        # Aquí se verifica si el usuario está registrado y conectado
         code_listusers = client.listusers(False)
-
         if code_listusers != 0:
             print("GET_FILE FAIL")
             return code_listusers
         
-
-        # TODO CONEXIÓN PEER TO PEER
+        # CONEXIÓN PEER TO PEER
 
         # 1) socket() -> crear socket cliente
 
@@ -595,20 +696,25 @@ class client :
             if user_info["username"] == user:
                 user_info_found = True
             i += 1
+        # El usuario remoto no está conectado
+        if not user_info_found:
+            print("GET_FILE FAIL")
+            return return_code
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         peer_address = (user_info["ip"], int(user_info["port"]))
 
-        # 2) connect() -> conexión con el otro cliente
-        sock.connect(peer_address)
-
-        return_code = 2
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(peer_address)
+        except:
+            print("GET_FILE FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
             
             # Llamada a GET_FILE
-
             client.write_string(sock, "GET_FILE")
             client.write_string(sock, remote_FileName)
 
@@ -617,26 +723,26 @@ class client :
 
             if return_code == 0:
                 print("GET_FILE OK")
-                # TODO En caso de codigo 0 el cliente remoto transferira:
-                # a) Una cadena de caracteres codificando el tamaño del fichero en bytes en decimal.
                 num_bytes_remote_file = client.read_number(sock)
-                # b) El contenido del archivo. El cliente local a medida que reciba el contenido del
-                # fichero lo ira almacenando en el fichero local que se ha pasado en la consola.
-                with open(local_FileName, 'w+b') as file:
-                    while True:
-                        data = sock.recv(num_bytes_remote_file+1)   # si hay bugs, poner +1 aquí a lo mejor ayuda
-                        if not data:
-                            break
-                        file.write(data)
+                # El contenido del archivo remoto se guarda en el archivo local especificado
+                # La flag "w+b" hace que el archivo se crea si no existe y se trunca si existe
+                file = open(local_FileName, 'w+b')
+                while True:
+                    data = sock.recv(num_bytes_remote_file+1)
+                    if not data:
+                        break
+                    file.write(data)
+                file.close()
             elif return_code == 1:
                 print("GET_FILE FAIL, FILE NOT EXIST")
             else:
                 print("GET_FILE FAIL")
+                file.close()
         except:
             print("GET_FILE FAIL")
+            file.close()
         finally:
             # 5) close() -> cerrar sesión
-            file.close()
             sock.close()
 
         return return_code
@@ -701,7 +807,7 @@ class client :
 
                     elif(line[0]=="DISCONNECT") :
                         if (len(line) == 2) :
-                            client.disconnect(line[1])
+                            client.disconnect(line[1], True)
                         else :
                             print("Syntax error. Usage: DISCONNECT <userName>")
 
@@ -715,7 +821,7 @@ class client :
                         if (len(line) == 1) :
                             # Check if connected -> DISCONNECT
                             if client._active_user != None:
-                                client.disconnect(client._active_user)
+                                client.disconnect(client._active_user, False)
                             break
                         else :
                             print("Syntax error. Use: QUIT")

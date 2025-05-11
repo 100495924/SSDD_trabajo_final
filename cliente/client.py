@@ -118,29 +118,6 @@ class client :
         zepp_client = zeep.Client(wsdl=wsdl)
         return zepp_client.service.send_date_hour()
 
-    # def socket_cheatsheet():
-    #     # 1) socket() -> crear socket cliente
-    #     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     server_address = (client._server, int(client._port))
-
-    #     # 2) connect() -> conexión con el servidor
-    #     sock.connect(server_address)
-
-    #     try:
-    #         # 3) write() -> enviar petición al servidor
-    #         message_send = "String prueba"
-    #         client.write_string(sock, message_send)
-    #         message_send = 10
-    #         client.write_number(sock, message_send)
-
-    #         # 4) read() -> recibir respuesta del servidor
-    #         message_read = client.read_string(sock)
-    #         message_read = client.read_number(sock)
-
-    #         print(f"mensaje: {message_read}")
-    #     finally:
-    #         # 5) close() -> cerrar sesión
-    #         sock.close()
 
     @staticmethod
     def  register(user) :

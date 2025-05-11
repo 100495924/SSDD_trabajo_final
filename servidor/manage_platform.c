@@ -159,8 +159,7 @@ int connect_user(char* user, char* ip_user, int port_user){
     // 1 si el usuario no registrado
     // 2 si el usuario ya está conectado
     // 3 en cualquier otro caso
-    
-    // ==========MODIFICAR===========
+
     // (1) Usuario registrado?
     int is_user_registered = check_user_registered(user);
     // No registrado

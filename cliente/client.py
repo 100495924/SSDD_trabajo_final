@@ -78,7 +78,6 @@ class client :
                 message = client.read_string(connection)
             except:
                 client.write_number(connection, 2)
-                file.close()
                 connection.close()
                 continue
 
@@ -88,28 +87,28 @@ class client :
                     remote_filename = client.read_string(connection)
                     # El archivo local no puede ser un directorio y el camino hacia él por los directorios debe existir
                     # Permitimos que el archivo en sí no exista
-                    if not (os.path.isfile(remote_filename) and os.path.exists(os.path.dirname(remote_filename))):
+                    if remote_filename[-1] != "/" and os.path.exists(os.path.dirname(remote_filename)):
                         remote_filesize = os.path.getsize(remote_filename)
+                        file = open(remote_filename, "rb")
                     else:
-                        client.write_number(connection, 1)
+                        raise FileNotFoundError
                     
-                    file = open(remote_filename, "rb")
                     # remote_filesize = os.path.getsize(remote_filename)
                 except Exception as e:
                     if type(e) == FileNotFoundError:
                         client.write_number(connection, 1)
                     else:
                         client.write_number(connection, 2)
+                    connection.close()
                 else:
                     client.write_number(connection, 0)
                     data = file.read()
-                    # data = file.read(1024) # mandamos el fichero en bloques de 1024 bytes
                     if data:
                         client.write_number(connection, remote_filesize)
                         connection.sendall(data)
                     else:
                         client.write_number(connection, 2)
-                finally:
+
                     file.close()
                     connection.close()
     
@@ -119,30 +118,29 @@ class client :
         zepp_client = zeep.Client(wsdl=wsdl)
         return zepp_client.service.send_date_hour()
 
-    def socket_cheatsheet():
-        # 1) socket() -> crear socket cliente
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_address = (client._server, int(client._port))
+    # def socket_cheatsheet():
+    #     # 1) socket() -> crear socket cliente
+    #     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+    #     # 2) connect() -> conexión con el servidor
+    #     sock.connect(server_address)
 
-        try:
-            # 3) write() -> enviar petición al servidor
-            message_send = "String prueba"
-            client.write_string(sock, message_send)
-            message_send = 10
-            client.write_number(sock, message_send)
+    #     try:
+    #         # 3) write() -> enviar petición al servidor
+    #         message_send = "String prueba"
+    #         client.write_string(sock, message_send)
+    #         message_send = 10
+    #         client.write_number(sock, message_send)
 
-            # 4) read() -> recibir respuesta del servidor
-            message_read = client.read_string(sock)
-            message_read = client.read_number(sock)
+    #         # 4) read() -> recibir respuesta del servidor
+    #         message_read = client.read_string(sock)
+    #         message_read = client.read_number(sock)
 
-            print(f"mensaje: {message_read}")
-        finally:
-            # 5) close() -> cerrar sesión
-            sock.close()
-
+    #         print(f"mensaje: {message_read}")
+    #     finally:
+    #         # 5) close() -> cerrar sesión
+    #         sock.close()
 
     @staticmethod
     def  register(user) :
@@ -157,10 +155,15 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("REGISTER FAIL")
+            return return_code
 
         try:
+
             # 3) write() -> enviar petición al servidor
             client.write_string(sock, "REGISTER")
             client.write_string(sock, user)
@@ -209,8 +212,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("UNREGISTER FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -271,8 +278,12 @@ class client :
         while client._server_thread_port == None:
             pass
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("CONNECT FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -318,8 +329,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("DISCONNECT FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -391,8 +406,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("PUBLISH FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -453,8 +472,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("DELETE FAIL")
+            return return_code
 
 
         try:
@@ -507,8 +530,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("LIST_USERS FAIL")
+            return return_code
 
 
         try:
@@ -583,8 +610,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (client._server, int(client._port))
 
-        # 2) connect() -> conexión con el servidor
-        sock.connect(server_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(server_address)
+        except:
+            print("LIST_CONTENT FAIL")
+            return return_code
 
 
         try:
@@ -641,7 +672,7 @@ class client :
             return return_code
         # El archivo local no puede ser un directorio y el camino hacia él por los directorios debe existir
         # Permitimos que el archivo en sí no exista
-        if not (os.path.isfile(local_FileName) and os.path.exists(os.path.dirname(local_FileName))):
+        if not (local_FileName[-1] != "/" and os.path.exists(os.path.dirname(local_FileName))):
             print("GET_FILE FAIL")
             return return_code
             
@@ -673,8 +704,12 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         peer_address = (user_info["ip"], int(user_info["port"]))
 
-        # 2) connect() -> conexión con el otro cliente
-        sock.connect(peer_address)
+        try:
+            # 2) connect() -> conexión con el servidor
+            sock.connect(peer_address)
+        except:
+            print("GET_FILE FAIL")
+            return return_code
 
         try:
             # 3) write() -> enviar petición al servidor
@@ -691,22 +726,23 @@ class client :
                 num_bytes_remote_file = client.read_number(sock)
                 # El contenido del archivo remoto se guarda en el archivo local especificado
                 # La flag "w+b" hace que el archivo se crea si no existe y se trunca si existe
-                with open(local_FileName, 'w+b') as file:
-                    while True:
-                        data = sock.recv(num_bytes_remote_file+1)   # si hay bugs, poner +1 aquí a lo mejor ayuda
-                        # data = sock.recv(1024) # mandamos el archivo en bloques de 2014 bytes
-                        if not data:
-                            break
-                        file.write(data)
+                file = open(local_FileName, 'w+b')
+                while True:
+                    data = sock.recv(num_bytes_remote_file+1)
+                    if not data:
+                        break
+                    file.write(data)
+                file.close()
             elif return_code == 1:
                 print("GET_FILE FAIL, FILE NOT EXIST")
             else:
                 print("GET_FILE FAIL")
+                file.close()
         except:
             print("GET_FILE FAIL")
+            file.close()
         finally:
             # 5) close() -> cerrar sesión
-            file.close()
             sock.close()
 
         return return_code

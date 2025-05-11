@@ -3,9 +3,10 @@ BIN_FILES_SERVER  = servidor/servidor rpc/servidor-rpc
 CC = gcc
 
 LDLIBS_SERVER = -lpthread -lm -ldl -ltirpc
-LDLIBS_FLAG = -fPIC 	# Para compilar los archivos .c de las librerías dinámicas
 CFLAGS += -g -I/usr/include/tirpc
 CPPFLAGS += -D_REENTRANT
+SERVER_DIR = servidor
+RPC_DIR = rpc
 
 
 all: 
@@ -18,16 +19,16 @@ rpc_logger_xdr:
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@.o $@.c 
 
 proxy-rpc: 
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o servidor/rpc_logger_clnt.o servidor/rpc_logger_clnt.c 
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o servidor/rpc_logger_client.o servidor/rpc_logger_client.c 
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $(SERVER_DIR)/rpc_logger_clnt.o $(SERVER_DIR)/rpc_logger_clnt.c 
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $(SERVER_DIR)/rpc_logger_client.o $(SERVER_DIR)/rpc_logger_client.c 
 
 servidor-rpc: 
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o rpc/rpc_logger_svc.o rpc/rpc_logger_svc.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o rpc/rpc_logger_server.o rpc/rpc_logger_server.c
-	$(CC) $(CFLAGS) -o rpc/$@ rpc/rpc_logger_svc.o rpc/rpc_logger_server.o rpc_logger_xdr.o  $(LDLIBS_SERVER) 
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $(RPC_DIR)/rpc_logger_svc.o $(RPC_DIR)/rpc_logger_svc.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $(RPC_DIR)/rpc_logger_server.o $(RPC_DIR)/rpc_logger_server.c
+	$(CC) $(CFLAGS) -o $(RPC_DIR)/$@ $(RPC_DIR)/rpc_logger_svc.o $(RPC_DIR)/rpc_logger_server.o rpc_logger_xdr.o  $(LDLIBS_SERVER) 
 
-servidor: servidor/servidor.o
-	$(CC) -o servidor/$@ servidor/$@.c servidor/protocol.c servidor/lines.c servidor/manage_platform.c servidor/rpc_logger_clnt.o servidor/rpc_logger_client.o rpc_logger_xdr.o $(LDLIBS_SERVER) 
+servidor: $(SERVER_DIR)/servidor.o
+	$(CC) -o $(SERVER_DIR)/$@ $(SERVER_DIR)/$@.c $(SERVER_DIR)/protocol.c $(SERVER_DIR)/lines.c $(SERVER_DIR)/manage_platform.c $(SERVER_DIR)/rpc_logger_clnt.o $(SERVER_DIR)/rpc_logger_client.o rpc_logger_xdr.o $(LDLIBS_SERVER) 
 
 
 clean: 

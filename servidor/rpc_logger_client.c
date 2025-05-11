@@ -53,6 +53,13 @@ send_log(char *username, char *operation, char *filename, char *date_time){
 
 	clnt_destroy (clnt);
 
+	free(send_log_rpc_1_args.username);
+	free(send_log_rpc_1_args.operation);
+	if (strcmp(operation, "PUBLISH") == 0 || strcmp(operation, "DELETE") == 0){
+		free(send_log_rpc_1_args.filename);
+	}
+	free(send_log_rpc_1_args.date_time);
+
 	return 0;
 
 }

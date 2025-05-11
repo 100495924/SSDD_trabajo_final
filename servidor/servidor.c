@@ -114,11 +114,14 @@ void tratar_peticion(struct peticion *pet){
         list_users_check(pet->client_user_name);
         
         char connected_users[11];
+        // obtener número de usuarios del directorio active_users
         int return_value = list_users_get_num(&num_users);
 
         if (return_value != 0){
+            // ha habido un error, solo se enviará el byte status al cliente
             status = return_value;
         }else{
+            // se continúa con al ejecución de la función
             if (sprintf(connected_users, "%ld", num_users) < 0){
                 status = 3;
             }
@@ -226,7 +229,7 @@ void tratar_peticion(struct peticion *pet){
         close(pet->socket_pet);
         return;
     }
-    printf("%s\n", date_hour);
+    //printf("%s\n", date_hour);
 
     // enviar un log al servidor rpc
     if (strcmp(pet->command_str, "PUBLISH") == 0 || strcmp(pet->command_str, "DELETE") == 0){
@@ -287,6 +290,7 @@ int main(int argc, char const *argv[]){
         return -1;
     }
 
+    // Obtener ip de la máquina en la que se ejecuta el servidor
     getifaddrs(&net_interfaces_addresses) < 0;
     temp_interface_ptr = net_interfaces_addresses;
 
